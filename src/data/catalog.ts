@@ -1,0 +1,229 @@
+import type { InstalledPlugin, StorePlugin } from '../types/plugin'
+
+/**
+ * DeepSeek Harness 官方插件收录库 —— 本文件是官方收录的唯一维护入口。
+ * 按创作者划分：收录新插件时在对应创作者的 plugins 下追加；
+ * 新的创作者新增一个 CreatorGroup 分组。第三方插件不在本库维护。
+ */
+
+/** 开发指南 / 开发资料入口（待确认：如有 Harness 官方开发文档再替换） */
+export const DEV_GUIDE_URL = 'https://github.com/joeseesun'
+
+export interface Creator {
+  /** GitHub 用户名，同时作为插件 author 字段 */
+  id: string
+  /** 中文名等展示名 */
+  name: string
+  homepage: string
+}
+
+export interface CreatorGroup {
+  creator: Creator
+  plugins: StorePlugin[]
+}
+
+export const OFFICIAL_REGISTRY: CreatorGroup[] = [
+  {
+    creator: { id: 'joeseesun', name: '乔木', homepage: 'https://github.com/joeseesun' },
+    plugins: [
+      {
+        id: 'qiaomu-rss-dsh',
+        name: 'AI RSS 阅读器',
+        alias: '乔木 RSS',
+        description:
+          '在 DeepSeek Harness 中阅读 RSS，与原生 AI 对话伴读文章；支持 OPML 导入导出与播客转写阅读。',
+        version: '0.9.2',
+        author: 'joeseesun',
+        authorName: '乔木',
+        license: 'GPL-3.0-only',
+        source: 'official',
+        repo: 'joeseesun/qiaomu-rss-dsh',
+        icon: 'rss',
+        configSchema: [{ key: 'refreshInterval', label: '刷新间隔（分钟）', type: 'number', step: 5 }],
+      },
+      {
+        id: 'qiaomu-reader-dsh',
+        name: '电子书阅读器',
+        alias: '乔木阅读',
+        description:
+          '在 DeepSeek Harness 中阅读 EPUB、PDF、TXT，划线批注、导出阅读笔记与 AI 伴读。',
+        version: '1.1.1',
+        author: 'joeseesun',
+        authorName: '乔木',
+        license: 'GPL-3.0-only',
+        source: 'official',
+        repo: 'joeseesun/qiaomu-reader-dsh',
+        icon: 'book-open',
+        configSchema: [
+          { key: 'theme', label: '阅读主题', type: 'select', options: ['跟随系统', '浅色', '深色'] },
+        ],
+      },
+      {
+        id: 'qiaomu-ui-learn-dsh',
+        name: '学习 UI 设计',
+        alias: '乔木 UI 学习',
+        description:
+          '乔木 UI 学习的 Harness 迁移版：13561 条设计参考、106 个交互标本、审美测验与 Markdown 学习笔记。',
+        version: '0.1.2',
+        author: 'joeseesun',
+        authorName: '乔木',
+        license: 'MIT',
+        source: 'official',
+        repo: 'joeseesun/qiaomu-ui-learn-dsh',
+        icon: 'palette',
+      },
+      {
+        id: 'qiaomu-home-dsh',
+        name: '个人工作台',
+        alias: '乔木 Home',
+        description:
+          '乔木 Home：让 Harness 成为一天的起点。会话搜索、今日重点、待办、记录与专注计时。',
+        version: '0.3.1',
+        author: 'joeseesun',
+        authorName: '乔木',
+        license: 'GPL-3.0-only',
+        source: 'official',
+        repo: 'joeseesun/qiaomu-home-dsh',
+        icon: 'layout-dashboard',
+        configSchema: [{ key: 'startAtLogin', label: '启动 Harness 时打开工作台', type: 'boolean' }],
+      },
+    ],
+  },
+]
+
+/**
+ * 第三方收录区：经核实的社区 DeepSeek Harness 插件，不进官方收录库。
+ * 收录标准与官方库一致：仓库真实存在、确为 DSH 插件（dsh plugin add 可装 /
+ * 声明 dsh.bundle），版本与许可证核对自仓库 package.json / LICENSE。
+ */
+export const THIRD_PARTY_REGISTRY: CreatorGroup[] = [
+  {
+    creator: { id: '0xsline', name: '0xsline', homepage: 'https://github.com/0xsline' },
+    plugins: [
+      {
+        id: 'dsh-spotlight',
+        name: 'Spotlight',
+        alias: '命令面板',
+        description:
+          '适用于 DeepSeek Harness Web 的键盘优先命令面板：⌘K 模糊查找斜杠命令、最近会话、UI 操作与插件设置。',
+        version: '0.0.2',
+        author: '0xsline',
+        license: 'MIT',
+        source: 'third-party',
+        repo: '0xsline/dsh-spotlight',
+        icon: 'command',
+      },
+    ],
+  },
+  {
+    creator: { id: 'asxiuxiu', name: 'asxiuxiu', homepage: 'https://github.com/asxiuxiu' },
+    plugins: [
+      {
+        id: 'dsh-quick-open',
+        name: 'Quick Open',
+        alias: '快速打开',
+        description:
+          'VSCode 风格的 Ctrl+P 快速打开：工作区模糊文件搜索、文件内查找，并可将选中代码引用插入 AI 对话。',
+        version: '0.3.2',
+        author: 'asxiuxiu',
+        license: 'MIT',
+        source: 'third-party',
+        repo: 'asxiuxiu/dsh-quick-open',
+        icon: 'folder-open',
+      },
+    ],
+  },
+  {
+    creator: { id: 'btsd321', name: 'btsd321', homepage: 'https://github.com/btsd321' },
+    plugins: [
+      {
+        id: 'dsh-oh-my-terminal',
+        name: 'Oh My Terminal',
+        alias: '终端面板',
+        description:
+          'DSH GUI 底部终端面板：基于 node-pty 与 xterm.js 的多会话终端，支持分屏、会话持久化与跨平台（ConPTY / openpty）。',
+        version: '0.4.7',
+        author: 'btsd321',
+        license: 'Apache-2.0',
+        source: 'third-party',
+        repo: 'btsd321/dsh-oh-my-terminal',
+        icon: 'square-terminal',
+      },
+    ],
+  },
+  {
+    creator: {
+      id: 'Ebony-Vinyl',
+      name: 'Ebony-Vinyl',
+      homepage: 'https://github.com/Ebony-Vinyl',
+    },
+    plugins: [
+      {
+        id: 'dsh-our-free-model',
+        name: 'Our Free Model',
+        alias: '免费模型接入',
+        description:
+          '免登录、免 API Key 使用 DeepSeek V4.1 Flash、Kimi K3 等免费模型，含用量看板与 OpenAI 兼容本地转发。',
+        version: '2.7.2',
+        author: 'Ebony-Vinyl',
+        license: 'MIT',
+        source: 'third-party',
+        repo: 'Ebony-Vinyl/dsh-our-free-model',
+        icon: 'zap',
+      },
+    ],
+  },
+]
+
+/** 按作者 ID 查找创作者 */
+export function findCreator(authorId: string) {
+  return OFFICIAL_REGISTRY.find((group) => group.creator.id === authorId)?.creator
+}
+
+/** 商场扁平目录（由官方收录库与第三方收录区派生） */
+export const STORE_CATALOG: StorePlugin[] = [
+  ...OFFICIAL_REGISTRY.flatMap((group) => group.plugins),
+  ...THIRD_PARTY_REGISTRY.flatMap((group) => group.plugins),
+]
+
+/** 初始已安装插件（模拟本地插件目录扫描结果） */
+export function createInitialInstalled(): InstalledPlugin[] {
+  return [
+    {
+      id: 'qiaomu-home-dsh',
+      name: '个人工作台',
+      alias: '乔木 Home',
+      description: '乔木 Home：让 Harness 成为一天的起点。会话搜索、今日重点、待办、记录与专注计时。',
+      installedVersion: '0.3.0',
+      author: 'joeseesun',
+      authorName: '乔木',
+      status: 'running',
+      filePath: 'plugins/darwin/arm64/qiaomu-home-dsh-v0.3.0.dylib',
+      repoLabel: '乔木 Home',
+      repoUrl: 'https://github.com/joeseesun/qiaomu-home-dsh',
+      icon: 'layout-dashboard',
+      configSchema: [
+        { key: 'startAtLogin', label: '启动 Harness 时打开工作台', type: 'boolean' },
+      ],
+      config: { startAtLogin: true },
+    },
+    {
+      id: 'qiaomu-reader-dsh',
+      name: '电子书阅读器',
+      alias: '乔木阅读',
+      description: '在 DeepSeek Harness 中阅读 EPUB、PDF、TXT，划线批注、导出阅读笔记与 AI 伴读。',
+      installedVersion: '1.1.1',
+      author: 'joeseesun',
+      authorName: '乔木',
+      status: 'stopped',
+      filePath: 'plugins/darwin/arm64/qiaomu-reader-dsh-v1.1.1.dylib',
+      repoLabel: '乔木阅读',
+      repoUrl: 'https://github.com/joeseesun/qiaomu-reader-dsh',
+      icon: 'book-open',
+      configSchema: [
+        { key: 'theme', label: '阅读主题', type: 'select', options: ['跟随系统', '浅色', '深色'] },
+      ],
+      config: { theme: '跟随系统' },
+    },
+  ]
+}
