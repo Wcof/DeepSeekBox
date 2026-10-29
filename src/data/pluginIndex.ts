@@ -17,6 +17,7 @@ interface IndexCategory {
 
 interface IndexVersion {
   version: string
+  publishTimestamp: number
   source: { type: 'github' }
   engines: Record<string, string>
 }
@@ -89,10 +90,34 @@ const CATEGORY_BY_PLUGIN: Record<string, string> = {
   'dsh-our-free-model': 'models',
 }
 
+/**
+ * 各插件当前收录版本的发布时间（Unix 秒）。
+ * 来源（gh api 核实于 2026-10-30）：Releases latest 的 published_at；
+ * 未发 Release 或 Release 落后于收录版本的（dsh-spotlight、dsh-quick-open），
+ * 取 package.json 最后一次变更提交的 committer.date。
+ * 「发现」页校验要求该字段为整数 Unix 秒，收录新插件时必须在此登记。
+ */
+const PUBLISH_TIMESTAMPS: Record<string, number> = {
+  'qiaomu-rss-dsh': 1793168802, // release v0.9.2 · 2026-10-28T06:26:42Z
+  'qiaomu-reader-dsh': 1793158004, // release v1.1.1 · 2026-10-28T03:26:44Z
+  'qiaomu-ui-learn-dsh': 1793158013, // release v0.1.2 · 2026-10-28T03:26:53Z
+  'qiaomu-home-dsh': 1793157999, // release v0.3.1 · 2026-10-28T03:26:39Z
+  'dsh-spotlight': 1787561813, // package.json 提交 471dee2 · 2026-08-24T08:56:53Z
+  'dsh-quick-open': 1791618520, // package.json 提交 81b0405 · 2026-10-10T07:48:40Z
+  'dsh-oh-my-terminal': 1793184490, // release v0.4.7 · 2026-10-28T10:48:10Z
+  'dsh-our-free-model': 1792990970, // release v2.7.2 · 2026-10-26T05:02:50Z
+}
+
 /** 生成 DSH 插件索引（format 1）；收录库更新后索引随之更新 */
 export function buildPluginCatalogIndex(): PluginCatalogIndex {
   const plugins = [...OFFICIAL_REGISTRY, ...THIRD_PARTY_REGISTRY].flatMap((group) =>
     group.plugins.map((plugin): IndexPlugin => {
+      const publishTimestamp = PUBLISH_TIMESTAMPS[plugin.id]
+      if (publishTimestamp === undefined) {
+        throw new Error(
+          `pluginIndex: ${plugin.id} 缺少 publishTimestamp，请在 PUBLISH_TIMESTAMPS 中登记（Releases published_at 或 package.json 变更提交时间）`,
+        )
+      }
       const url = `https://github.com/${plugin.repo}`
       return {
         name: plugin.id,
@@ -109,7 +134,7 @@ export function buildPluginCatalogIndex(): PluginCatalogIndex {
           labels: [],
           sortKeys: {},
         },
-        versions: [{ version: plugin.version, source: { type: 'github' }, engines: {} }],
+        versions: [{ version: plugin.version, publishTimestamp, source: { type: 'github' }, engines: {} }],
       }
     }),
   )

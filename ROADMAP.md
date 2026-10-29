@@ -17,10 +17,10 @@
 - 「开发指南 / 开发资料」外链暂指向 https://github.com/joeseesun ，待有 Harness 官方开发文档后替换（`src/data/catalog.ts` 的 `DEV_GUIDE_URL`）。
 - 乔木 RSS 的官方版本号取自 Releases 页 v0.9.2（2026-10-28 发布）；后续以仓库最新 Release 为准同步。
 - 第三方收录的版本号核对自各仓库 package.json（2026-10-30）：dsh-spotlight 0.0.2、dsh-quick-open 0.3.2、dsh-oh-my-terminal 0.4.7、dsh-our-free-model 2.7.2；后续以仓库为准同步。
-- 索引 `versions[].publishTimestamp` 因各仓库未提供可靠发布时间而省略；若「发现」页要求该字段，再从 GitHub Releases 时间补齐（`src/data/pluginIndex.ts`）。
 
 ## 最近完成
 
+- 2026-10-30 07:48 — 索引补齐「发现」页必需的 `publishTimestamp` 字段：`src/data/pluginIndex.ts` 新增 `PUBLISH_TIMESTAMPS` 登记表（8 个插件的真实发布时间，6 个取 Releases published_at；dsh-spotlight 未发版、dsh-quick-open 版本超前于 Release，均取 package.json 变更提交时间，gh api 核实），缺失登记时构建直接报错；AGENTS 更新登记要求。涉及 `src/data/pluginIndex.ts`、`AGENTS.md`。
 - 2026-10-30 07:41 — 项目发布到 GitHub 并固化索引 URL：postbuild 脚本把 `dist/index.json` 同步到仓库根目录 `index.json` 并提交，README / AGENTS 写入对外索引 URL（jsDelivr：`https://cdn.jsdelivr.net/gh/Wcof/DeepSeekBox@main/index.json`；raw：`https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json`）；推送至 `Wcof/DeepSeekBox`（公开仓库）main 分支。涉及 `package.json`、根目录 `index.json`、`README.md`、`AGENTS.md`。
 - 2026-10-30 07:13 — 项目改造为 DSH 插件市场索引源：新增 `src/data/pluginIndex.ts` 从收录库生成 `format: 1` 标准索引（双语标题/描述、6 个分类、版本与 GitHub 来源，结构对齐 awesome-dsh-plugin 索引）；`vite.config.ts` 新增 `pluginIndexSource` 插件，dev 服务器中间件与 `vite build` 产物（`dist/index.json`）双通道提供 `/index.json`；商场工具栏新增「索引源」按钮；新建 README.md 说明索引订阅方式。涉及 `src/data/pluginIndex.ts`、`vite.config.ts`、`PluginCenter.vue`。
 - 2026-10-30 00:16 — 检索并收录 GitHub 上的第三方 DeepSeek Harness 插件：新增 `THIRD_PARTY_REGISTRY` 数据区与 `STORE_CATALOG` 派生，收录 4 个经核实的社区插件（0xsline/dsh-spotlight 命令面板、asxiuxiu/dsh-quick-open 快速打开、btsd321/dsh-oh-my-terminal 终端面板、Ebony-Vinyl/dsh-our-free-model 免费模型接入，均为 dsh-plugin 主题标签仓库并核对版本/许可证）；商场分组逻辑扩展为官方库 + 第三方收录区按创作者分组，新增 command/zap/square-terminal/folder-open 图标；AGENTS.md 收录边界同步更新。涉及 `src/data/catalog.ts`、`src/stores/pluginCenter.ts`、`src/components/icons/iconNames.ts`。
@@ -29,6 +29,7 @@
 
 ## 最近验证
 
+- 2026-10-30 07:48 — 验证对象为索引 `publishTimestamp` 修复（npm run build + node 校验 + 线上 curl）：8 个插件的时间戳均为整数 Unix 秒且在 [0, 1e11) 内，与 gh api 核实的 Releases/提交时间一致；推送后清理 jsDelivr 缓存并复检线上 URL（详见最近完成时间线）。
 - 2026-10-30 07:43 — 验证对象为线上索引源（推送 Wcof/DeepSeekBox main 后 curl 实测）：jsDelivr `https://cdn.jsdelivr.net/gh/Wcof/DeepSeekBox@main/index.json` 返回 200 `application/json`，raw `https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json` 返回 200，两处均为 `format: 1`、8 个插件（乔木 4 + 第三方 4）；同时修正提交内容：`*.tsbuildinfo` 构建缓存加入 .gitignore 并移出跟踪（amend 于推送前完成）。
 - 2026-10-30 07:13 — 验证对象为插件市场索引源（`npm run build` + `vite preview` + dev 实测）：构建零错误并输出 `dist/index.json`（8.58 kB）；node 校验索引 `format: 1`、标题「DeepSeekBox 插件索引」、8 个插件（乔木 4 + 第三方 4，版本与分类正确）、6 个分类；`vite preview` 与 dev 中间件下 `GET /index.json` 均返回 200 `application/json`；浏览器实测商场工具栏「索引源」按钮存在，应用内同源 `fetch('/index.json')` 返回 200 且 8 个插件。验证完成后 5180 / 4180 端口服务均已关闭，无残留进程。
 - 2026-10-30 00:16 — 验证对象为第三方插件收录（npm run dev，浏览器实测）：`npm run build`（含 vue-tsc）通过；商场按「乔木 joeseesun」+ 4 个第三方创作者分组展示，第三方卡片带蓝色「第三方」标签、独立图标、版本与许可证正确；下载 Oh My Terminal 后通知条「已下载 Oh My Terminal，可在本地插件中启用」，本地列表出现该插件为已停用（启用/配置/删除操作正确）；「可安装」筛选返回剩余 5 个未下载插件；官方 4 卡片状态（下载/启停/删除）不受影响。

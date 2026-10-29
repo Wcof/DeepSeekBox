@@ -28,7 +28,7 @@ DeepSeek Harness 桌面端 APP 的前端工程，当前包含插件中心（安�
   - `THIRD_PARTY_REGISTRY`（第三方收录）：经核实的社区 DSH 插件，标准相同——仓库真实存在、确为 DSH 插件（`dsh plugin add` 可装 / 声明 dsh.bundle），版本与许可证核对自仓库 package.json / LICENSE；展示时带「第三方」标签并按创作者分组。
 - 收录检索入口参考 awesome-dsh-plugin 清单与 GitHub topic（`deepseek-harness`、`dsh-plugin`）；非 DeepSeek Harness 宿主的插件（如 CLIProxyAPI 插件）不得收录。
 - 未收录进两个登记区的插件归入「其他创作者」分组；新增创作者在对应登记区新增分组，不为单条插件改分组逻辑。
-- 索引源：`/index.json` 由 `vite.config.ts` 的 `pluginIndexSource` 插件提供（dev 中间件 + build 产物），格式为 DSH 插件索引 `format: 1`；仓库根目录的 `index.json` 由 `npm run build` 的 postbuild 脚本从 `dist/index.json` 同步生成并提交，供 raw / jsDelivr 稳定引用，禁止手工编辑。只改 `src/data/pluginIndex.ts` 的映射逻辑来调整索引输出。`versions[].publishTimestamp` 因仓库未提供发布时间而省略，属已知差异。对外索引 URL：`https://cdn.jsdelivr.net/gh/Wcof/DeepSeekBox@main/index.json` 与 `https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json`。
+- 索引源：`/index.json` 由 `vite.config.ts` 的 `pluginIndexSource` 插件提供（dev 中间件 + build 产物），格式为 DSH 插件索引 `format: 1`；仓库根目录的 `index.json` 由 `npm run build` 的 postbuild 脚本从 `dist/index.json` 同步生成并提交，供 raw / jsDelivr 稳定引用，禁止手工编辑。只改 `src/data/pluginIndex.ts` 的映射逻辑来调整索引输出。`versions[].publishTimestamp` 为「发现」页必需字段（整数 Unix 秒）：收录新插件时必须在 `PUBLISH_TIMESTAMPS` 登记真实发布时间（Releases published_at，未发版的取 package.json 变更提交时间），缺失时构建直接报错。对外索引 URL：`https://cdn.jsdelivr.net/gh/Wcof/DeepSeekBox@main/index.json` 与 `https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json`。
 
 ## 验证入口
 

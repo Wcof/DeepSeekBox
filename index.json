@@ -74,6 +74,7 @@
       "versions": [
         {
           "version": "0.9.2",
+          "publishTimestamp": 1793168802,
           "source": {
             "type": "github"
           },
@@ -104,6 +105,7 @@
       "versions": [
         {
           "version": "1.1.1",
+          "publishTimestamp": 1793158004,
           "source": {
             "type": "github"
           },
@@ -134,6 +136,7 @@
       "versions": [
         {
           "version": "0.1.2",
+          "publishTimestamp": 1793158013,
           "source": {
             "type": "github"
           },
@@ -164,6 +167,7 @@
       "versions": [
         {
           "version": "0.3.1",
+          "publishTimestamp": 1793157999,
           "source": {
             "type": "github"
           },
@@ -194,6 +198,7 @@
       "versions": [
         {
           "version": "0.0.2",
+          "publishTimestamp": 1787561813,
           "source": {
             "type": "github"
           },
@@ -224,6 +229,7 @@
       "versions": [
         {
           "version": "0.3.2",
+          "publishTimestamp": 1791618520,
           "source": {
             "type": "github"
           },
@@ -254,6 +260,7 @@
       "versions": [
         {
           "version": "0.4.7",
+          "publishTimestamp": 1793184490,
           "source": {
             "type": "github"
           },
@@ -284,6 +291,7 @@
       "versions": [
         {
           "version": "2.7.2",
+          "publishTimestamp": 1792990970,
           "source": {
             "type": "github"
           },
