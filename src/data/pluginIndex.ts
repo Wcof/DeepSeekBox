@@ -18,7 +18,7 @@ interface IndexCategory {
 interface IndexVersion {
   version: string
   publishTimestamp: number
-  source: { type: 'github' }
+  source: { type: 'git'; url: string; commit: string }
   engines: Record<string, string>
 }
 
@@ -91,31 +91,34 @@ const CATEGORY_BY_PLUGIN: Record<string, string> = {
 }
 
 /**
- * 各插件当前收录版本的发布时间（Unix 秒）。
- * 来源（gh api 核实于 2026-10-30）：Releases latest 的 published_at；
- * 未发 Release 或 Release 落后于收录版本的（dsh-spotlight、dsh-quick-open），
- * 取 package.json 最后一次变更提交的 committer.date。
- * 「发现」页校验要求该字段为整数 Unix 秒，收录新插件时必须在此登记。
+ * 各插件当前收录版本的来源登记表。
+ * 「发现」页校验（deepseek-ai/deepseek-harness packages/util/plugin-market-index）要求：
+ * - publishTimestamp 为整数 Unix 秒；
+ * - source.type 为 "npm" 或 "git"，git 必须携带 https 仓库 URL 与 40 位小写 commit SHA。
+ * 数据来源（gh api 核实于 2026-10-30）：publishTimestamp 取 Releases latest 的 published_at，
+ * 未发 Release 或 Release 落后于收录版本的（dsh-spotlight、dsh-quick-open）取 package.json
+ * 最后一次变更提交的 committer.date；commit 取 Release tag / 变更提交的完整 SHA。
+ * 收录新插件或升版时必须同步登记，缺失时构建直接报错。
  */
-const PUBLISH_TIMESTAMPS: Record<string, number> = {
-  'qiaomu-rss-dsh': 1793168802, // release v0.9.2 · 2026-10-28T06:26:42Z
-  'qiaomu-reader-dsh': 1793158004, // release v1.1.1 · 2026-10-28T03:26:44Z
-  'qiaomu-ui-learn-dsh': 1793158013, // release v0.1.2 · 2026-10-28T03:26:53Z
-  'qiaomu-home-dsh': 1793157999, // release v0.3.1 · 2026-10-28T03:26:39Z
-  'dsh-spotlight': 1787561813, // package.json 提交 471dee2 · 2026-08-24T08:56:53Z
-  'dsh-quick-open': 1791618520, // package.json 提交 81b0405 · 2026-10-10T07:48:40Z
-  'dsh-oh-my-terminal': 1793184490, // release v0.4.7 · 2026-10-28T10:48:10Z
-  'dsh-our-free-model': 1792990970, // release v2.7.2 · 2026-10-26T05:02:50Z
+const VERSION_SOURCES: Record<string, { publishTimestamp: number; commit: string }> = {
+  'qiaomu-rss-dsh': { publishTimestamp: 1793168802, commit: '7f2deb7ed9583675927663de74d97f70b277c52e' }, // release v0.9.2 · 2026-10-28T06:26:42Z
+  'qiaomu-reader-dsh': { publishTimestamp: 1793158004, commit: 'af0a5a283deee91157efd42eeb2b06372c79b230' }, // release v1.1.1 · 2026-10-28T03:26:44Z
+  'qiaomu-ui-learn-dsh': { publishTimestamp: 1793158013, commit: '80ac9520f19bfdea79a906f5134d80a2bf68a099' }, // release v0.1.2 · 2026-10-28T03:26:53Z
+  'qiaomu-home-dsh': { publishTimestamp: 1793157999, commit: '45f0c1af9b7dacce424eb87c80d4f3a3c5ab4f70' }, // release v0.3.1 · 2026-10-28T03:26:39Z
+  'dsh-spotlight': { publishTimestamp: 1787561813, commit: '471dee2c528bc7203669f3e540d38181b657abe4' }, // package.json 提交 · 2026-08-24T08:56:53Z
+  'dsh-quick-open': { publishTimestamp: 1791618520, commit: '81b04057d2ce6f7ad585b0d94a3de895c4f26143' }, // package.json 提交 · 2026-10-10T07:48:40Z
+  'dsh-oh-my-terminal': { publishTimestamp: 1793184490, commit: 'e40df7b16a162b4df57bd9f77001474d347da748' }, // release tag v0.4.7 解包 · 2026-10-28T10:48:10Z
+  'dsh-our-free-model': { publishTimestamp: 1792990970, commit: 'e1b347aec9cc956eda70a766219f028a811078e2' }, // release v2.7.2 · 2026-10-26T05:02:50Z
 }
 
 /** 生成 DSH 插件索引（format 1）；收录库更新后索引随之更新 */
 export function buildPluginCatalogIndex(): PluginCatalogIndex {
   const plugins = [...OFFICIAL_REGISTRY, ...THIRD_PARTY_REGISTRY].flatMap((group) =>
     group.plugins.map((plugin): IndexPlugin => {
-      const publishTimestamp = PUBLISH_TIMESTAMPS[plugin.id]
-      if (publishTimestamp === undefined) {
+      const versionSource = VERSION_SOURCES[plugin.id]
+      if (versionSource === undefined) {
         throw new Error(
-          `pluginIndex: ${plugin.id} 缺少 publishTimestamp，请在 PUBLISH_TIMESTAMPS 中登记（Releases published_at 或 package.json 变更提交时间）`,
+          `pluginIndex: ${plugin.id} 缺少版本来源登记，请在 VERSION_SOURCES 中登记 publishTimestamp 与 commit SHA`,
         )
       }
       const url = `https://github.com/${plugin.repo}`
@@ -134,7 +137,14 @@ export function buildPluginCatalogIndex(): PluginCatalogIndex {
           labels: [],
           sortKeys: {},
         },
-        versions: [{ version: plugin.version, publishTimestamp, source: { type: 'github' }, engines: {} }],
+        versions: [
+          {
+            version: plugin.version,
+            publishTimestamp: versionSource.publishTimestamp,
+            source: { type: 'git', url, commit: versionSource.commit },
+            engines: {},
+          },
+        ],
       }
     }),
   )

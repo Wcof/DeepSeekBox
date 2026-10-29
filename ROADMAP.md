@@ -20,6 +20,7 @@
 
 ## 最近完成
 
+- 2026-10-30 07:58 — 索引 `source.type` 修正为官方允许的 `"git"` 并引入官方校验器：`versions[].source` 从自造的 `{type:"github"}` 改为官方要求的 `{type:"git", url, commit}`（git 必须携带 40 位小写 commit SHA，取 Release tag 解包或 package.json 变更提交，8 个插件均已登记进 `VERSION_SOURCES`）；新增 devDependency `@deepseek-ai/dsh-plugin-market-index` 与 `scripts/validate-index.mjs`，postbuild 在生成索引后立即用官方校验器验证（`npm run validate:index` 可单独运行）。规则依据：deepseek-ai/deepseek-harness `packages/util/plugin-market-index` 源码。涉及 `src/data/pluginIndex.ts`、`scripts/validate-index.mjs`、`package.json`、`AGENTS.md`。
 - 2026-10-30 07:48 — 索引补齐「发现」页必需的 `publishTimestamp` 字段：`src/data/pluginIndex.ts` 新增 `PUBLISH_TIMESTAMPS` 登记表（8 个插件的真实发布时间，6 个取 Releases published_at；dsh-spotlight 未发版、dsh-quick-open 版本超前于 Release，均取 package.json 变更提交时间，gh api 核实），缺失登记时构建直接报错；AGENTS 更新登记要求。涉及 `src/data/pluginIndex.ts`、`AGENTS.md`。
 - 2026-10-30 07:41 — 项目发布到 GitHub 并固化索引 URL：postbuild 脚本把 `dist/index.json` 同步到仓库根目录 `index.json` 并提交，README / AGENTS 写入对外索引 URL（jsDelivr：`https://cdn.jsdelivr.net/gh/Wcof/DeepSeekBox@main/index.json`；raw：`https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json`）；推送至 `Wcof/DeepSeekBox`（公开仓库）main 分支。涉及 `package.json`、根目录 `index.json`、`README.md`、`AGENTS.md`。
 - 2026-10-30 07:13 — 项目改造为 DSH 插件市场索引源：新增 `src/data/pluginIndex.ts` 从收录库生成 `format: 1` 标准索引（双语标题/描述、6 个分类、版本与 GitHub 来源，结构对齐 awesome-dsh-plugin 索引）；`vite.config.ts` 新增 `pluginIndexSource` 插件，dev 服务器中间件与 `vite build` 产物（`dist/index.json`）双通道提供 `/index.json`；商场工具栏新增「索引源」按钮；新建 README.md 说明索引订阅方式。涉及 `src/data/pluginIndex.ts`、`vite.config.ts`、`PluginCenter.vue`。
@@ -29,6 +30,7 @@
 
 ## 最近验证
 
+- 2026-10-30 07:58 — 验证对象为索引 git 来源修复：`npm run build` 通过且 postbuild 内置的官方校验器（@deepseek-ai/dsh-plugin-market-index）输出「✓ 索引通过官方校验：format 1，8 个插件」；node 逐项复检 8 个条目的 `source.type === "git"`、`source.url` 为规范 https 仓库地址、`source.commit` 匹配 40 位小写十六进制、`publishTimestamp` 为整数 Unix 秒；推送后清理 jsDelivr 缓存并复检线上 URL（详见最近完成时间线）。
 - 2026-10-30 07:48 — 验证对象为索引 `publishTimestamp` 修复（npm run build + node 校验 + 线上 curl）：8 个插件的时间戳均为整数 Unix 秒且在 [0, 1e11) 内，与 gh api 核实的 Releases/提交时间一致；推送后清理 jsDelivr 缓存并复检线上 URL（详见最近完成时间线）。
 - 2026-10-30 07:43 — 验证对象为线上索引源（推送 Wcof/DeepSeekBox main 后 curl 实测）：jsDelivr `https://cdn.jsdelivr.net/gh/Wcof/DeepSeekBox@main/index.json` 返回 200 `application/json`，raw `https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json` 返回 200，两处均为 `format: 1`、8 个插件（乔木 4 + 第三方 4）；同时修正提交内容：`*.tsbuildinfo` 构建缓存加入 .gitignore 并移出跟踪（amend 于推送前完成）。
 - 2026-10-30 07:13 — 验证对象为插件市场索引源（`npm run build` + `vite preview` + dev 实测）：构建零错误并输出 `dist/index.json`（8.58 kB）；node 校验索引 `format: 1`、标题「DeepSeekBox 插件索引」、8 个插件（乔木 4 + 第三方 4，版本与分类正确）、6 个分类；`vite preview` 与 dev 中间件下 `GET /index.json` 均返回 200 `application/json`；浏览器实测商场工具栏「索引源」按钮存在，应用内同源 `fetch('/index.json')` 返回 200 且 8 个插件。验证完成后 5180 / 4180 端口服务均已关闭，无残留进程。
