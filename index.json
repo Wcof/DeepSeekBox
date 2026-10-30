@@ -52,12 +52,55 @@
   },
   "plugins": [
     {
+      "name": "deepseekbox-plugin-center",
+      "title": {
+        "zh": "插件中心",
+        "en": "DeepSeekBox Plugin Center"
+      },
+      "description": {
+        "en": "The DeepSeek Harness plugin center: browse, download and manage plugins with update checks and per-plugin settings; also published as the official DeepSeekBox catalog index.",
+        "zh": "DeepSeek Harness 插件中心：浏览、下载与管理插件，检查更新与独立配置，同时作为官方收录索引源发布。"
+      },
+      "author": "Wcof",
+      "icon": "https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/icons/deepseekbox-plugin-center.svg",
+      "homepage": "https://github.com/Wcof/DeepSeekBox",
+      "repository": {
+        "url": "https://github.com/Wcof/DeepSeekBox"
+      },
+      "metadata": {
+        "category": "tools",
+        "keywords": [
+          "DeepSeekBox",
+          "official"
+        ],
+        "labels": [],
+        "sortKeys": {}
+      },
+      "versions": [
+        {
+          "version": "0.1.0",
+          "publishTimestamp": 1793318933,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/Wcof/DeepSeekBox",
+            "commit": "26f9321ada24ceff750e9e565d91bef3e519c52d"
+          },
+          "engines": {}
+        }
+      ]
+    },
+    {
       "name": "qiaomu-rss-dsh",
-      "title": "joeseesun/qiaomu-rss-dsh",
+      "title": {
+        "zh": "AI RSS 阅读器",
+        "en": "Qiaomu RSS"
+      },
       "description": {
         "en": "Read RSS in DeepSeek Harness with native AI companion reading; supports OPML import/export and podcast transcript reading.",
         "zh": "在 DeepSeek Harness 中阅读 RSS，与原生 AI 对话伴读文章；支持 OPML 导入导出与播客转写阅读。"
       },
+      "author": "joeseesun（乔木）",
+      "icon": "https://github.com/joeseesun.png",
       "homepage": "https://github.com/joeseesun/qiaomu-rss-dsh",
       "repository": {
         "url": "https://github.com/joeseesun/qiaomu-rss-dsh"
@@ -86,11 +129,16 @@
     },
     {
       "name": "qiaomu-reader-dsh",
-      "title": "joeseesun/qiaomu-reader-dsh",
+      "title": {
+        "zh": "电子书阅读器",
+        "en": "Qiaomu Reader"
+      },
       "description": {
         "en": "Read EPUB, PDF and TXT in DeepSeek Harness with highlights, reading notes export and AI companion.",
         "zh": "在 DeepSeek Harness 中阅读 EPUB、PDF、TXT，划线批注、导出阅读笔记与 AI 伴读。"
       },
+      "author": "joeseesun（乔木）",
+      "icon": "https://raw.githubusercontent.com/joeseesun/qiaomu-reader-dsh/af0a5a283deee91157efd42eeb2b06372c79b230/icon.svg",
       "homepage": "https://github.com/joeseesun/qiaomu-reader-dsh",
       "repository": {
         "url": "https://github.com/joeseesun/qiaomu-reader-dsh"
@@ -119,11 +167,16 @@
     },
     {
       "name": "qiaomu-ui-learn-dsh",
-      "title": "joeseesun/qiaomu-ui-learn-dsh",
+      "title": {
+        "zh": "学习 UI 设计",
+        "en": "Qiaomu UI Learn"
+      },
       "description": {
         "en": "Harness port of Qiaomu UI Learn: 13,561 design references, 106 interaction specimens, aesthetic quizzes and Markdown study notes.",
         "zh": "乔木 UI 学习的 Harness 迁移版：13561 条设计参考、106 个交互标本、审美测验与 Markdown 学习笔记。"
       },
+      "author": "joeseesun（乔木）",
+      "icon": "https://raw.githubusercontent.com/joeseesun/qiaomu-ui-learn-dsh/80ac9520f19bfdea79a906f5134d80a2bf68a099/icon.svg",
       "homepage": "https://github.com/joeseesun/qiaomu-ui-learn-dsh",
       "repository": {
         "url": "https://github.com/joeseesun/qiaomu-ui-learn-dsh"
@@ -152,11 +205,16 @@
     },
     {
       "name": "qiaomu-home-dsh",
-      "title": "joeseesun/qiaomu-home-dsh",
+      "title": {
+        "zh": "个人工作台",
+        "en": "Qiaomu Home"
+      },
       "description": {
         "en": "Qiaomu Home makes Harness the start of your day: conversation search, daily focus, todos, notes and a focus timer.",
         "zh": "乔木 Home：让 Harness 成为一天的起点。会话搜索、今日重点、待办、记录与专注计时。"
       },
+      "author": "joeseesun（乔木）",
+      "icon": "https://raw.githubusercontent.com/joeseesun/qiaomu-home-dsh/45f0c1af9b7dacce424eb87c80d4f3a3c5ab4f70/icon.svg",
       "homepage": "https://github.com/joeseesun/qiaomu-home-dsh",
       "repository": {
         "url": "https://github.com/joeseesun/qiaomu-home-dsh"
@@ -185,11 +243,16 @@
     },
     {
       "name": "dsh-spotlight",
-      "title": "0xsline/dsh-spotlight",
+      "title": {
+        "zh": "Spotlight",
+        "en": "Spotlight"
+      },
       "description": {
         "en": "A keyboard-first command palette for DeepSeek Harness Web: fuzzy-find slash commands, recent sessions, UI actions and plugin settings.",
         "zh": "适用于 DeepSeek Harness Web 的键盘优先命令面板：⌘K 模糊查找斜杠命令、最近会话、UI 操作与插件设置。"
       },
+      "author": "0xsline",
+      "icon": "https://github.com/0xsline.png",
       "homepage": "https://github.com/0xsline/dsh-spotlight",
       "repository": {
         "url": "https://github.com/0xsline/dsh-spotlight"
@@ -218,11 +281,16 @@
     },
     {
       "name": "dsh-quick-open",
-      "title": "asxiuxiu/dsh-quick-open",
+      "title": {
+        "zh": "Quick Open",
+        "en": "Quick Open"
+      },
       "description": {
         "en": "VSCode-style Ctrl+P quick open for DSH: fuzzy workspace file search, in-file find, and code reference insertion into AI chats.",
         "zh": "VSCode 风格的 Ctrl+P 快速打开：工作区模糊文件搜索、文件内查找，并可将选中代码引用插入 AI 对话。"
       },
+      "author": "asxiuxiu",
+      "icon": "https://github.com/asxiuxiu.png",
       "homepage": "https://github.com/asxiuxiu/dsh-quick-open",
       "repository": {
         "url": "https://github.com/asxiuxiu/dsh-quick-open"
@@ -251,11 +319,16 @@
     },
     {
       "name": "dsh-oh-my-terminal",
-      "title": "btsd321/dsh-oh-my-terminal",
+      "title": {
+        "zh": "Oh My Terminal",
+        "en": "Oh My Terminal"
+      },
       "description": {
         "en": "A bottom terminal panel for DSH GUI: multi-session terminal on node-pty and xterm.js with split panes, session persistence and cross-platform support (ConPTY / openpty).",
         "zh": "DSH GUI 底部终端面板：基于 node-pty 与 xterm.js 的多会话终端，支持分屏、会话持久化与跨平台（ConPTY / openpty）。"
       },
+      "author": "btsd321",
+      "icon": "https://raw.githubusercontent.com/btsd321/dsh-oh-my-terminal/e40df7b16a162b4df57bd9f77001474d347da748/icon.jpg",
       "homepage": "https://github.com/btsd321/dsh-oh-my-terminal",
       "repository": {
         "url": "https://github.com/btsd321/dsh-oh-my-terminal"
@@ -284,11 +357,16 @@
     },
     {
       "name": "dsh-our-free-model",
-      "title": "Ebony-Vinyl/dsh-our-free-model",
+      "title": {
+        "zh": "Our Free Model",
+        "en": "Our Free Model"
+      },
       "description": {
         "en": "Use free models such as DeepSeek V4.1 Flash and Kimi K3 without login or API keys; includes a usage dashboard and an OpenAI-compatible local proxy.",
         "zh": "免登录、免 API Key 使用 DeepSeek V4.1 Flash、Kimi K3 等免费模型，含用量看板与 OpenAI 兼容本地转发。"
       },
+      "author": "Ebony-Vinyl",
+      "icon": "https://raw.githubusercontent.com/Ebony-Vinyl/dsh-our-free-model/e1b347aec9cc956eda70a766219f028a811078e2/icon.svg",
       "homepage": "https://github.com/Ebony-Vinyl/dsh-our-free-model",
       "repository": {
         "url": "https://github.com/Ebony-Vinyl/dsh-our-free-model"

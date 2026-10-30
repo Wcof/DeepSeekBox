@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "postbuild": "cp dist/index.json index.json && node scripts/validate-index.mjs",
+    "postbuild": "cp dist/index.json index.json && node scripts/sync-self-entry.mjs && node scripts/validate-index.mjs",
     "validate:index": "node scripts/validate-index.mjs",
     "preview": "vite preview"
   },

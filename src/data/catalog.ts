@@ -24,6 +24,25 @@ export interface CreatorGroup {
 
 export const OFFICIAL_REGISTRY: CreatorGroup[] = [
   {
+    // 插件中心自身作为第一款官方插件置于首位
+    creator: { id: 'Wcof', name: 'DeepSeekBox', homepage: 'https://github.com/Wcof/DeepSeekBox' },
+    plugins: [
+      {
+        id: 'deepseekbox-plugin-center',
+        name: '插件中心',
+        alias: 'DeepSeekBox',
+        description:
+          'DeepSeek Harness 插件中心：浏览、下载与管理插件，检查更新与独立配置，同时作为官方收录索引源发布。',
+        version: '0.1.0',
+        author: 'Wcof',
+        license: 'MIT',
+        source: 'official',
+        repo: 'Wcof/DeepSeekBox',
+        icon: 'puzzle',
+      },
+    ],
+  },
+  {
     creator: { id: 'joeseesun', name: '乔木', homepage: 'https://github.com/joeseesun' },
     plugins: [
       {

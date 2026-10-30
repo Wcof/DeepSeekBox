@@ -1,4 +1,5 @@
 import { OFFICIAL_REGISTRY, THIRD_PARTY_REGISTRY } from './catalog'
+import { authorLabel } from '../types/plugin'
 
 /**
  * DeepSeekBox 插件市场索引源。
@@ -24,8 +25,10 @@ interface IndexVersion {
 
 interface IndexPlugin {
   name: string
-  title: string
+  title: Bilingual
   description: Bilingual
+  author?: string
+  icon?: string
   homepage: string
   repository: { url: string }
   metadata: {
@@ -61,6 +64,8 @@ const CATEGORIES: Record<string, IndexCategory> = {
 
 /** 每个收录插件的英文描述（与中文描述同义） */
 const DESCRIPTIONS_EN: Record<string, string> = {
+  'deepseekbox-plugin-center':
+    'The DeepSeek Harness plugin center: browse, download and manage plugins with update checks and per-plugin settings; also published as the official DeepSeekBox catalog index.',
   'qiaomu-rss-dsh':
     'Read RSS in DeepSeek Harness with native AI companion reading; supports OPML import/export and podcast transcript reading.',
   'qiaomu-reader-dsh':
@@ -80,6 +85,7 @@ const DESCRIPTIONS_EN: Record<string, string> = {
 }
 
 const CATEGORY_BY_PLUGIN: Record<string, string> = {
+  'deepseekbox-plugin-center': 'tools',
   'qiaomu-rss-dsh': 'reading',
   'qiaomu-reader-dsh': 'reading',
   'qiaomu-ui-learn-dsh': 'learning',
@@ -88,6 +94,42 @@ const CATEGORY_BY_PLUGIN: Record<string, string> = {
   'dsh-quick-open': 'ui',
   'dsh-oh-my-terminal': 'tools',
   'dsh-our-free-model': 'models',
+}
+
+/** 英文展示名（title 的 en 键；zh 键使用收录库的展示名称） */
+const TITLE_EN: Record<string, string> = {
+  'deepseekbox-plugin-center': 'DeepSeekBox Plugin Center',
+  'qiaomu-rss-dsh': 'Qiaomu RSS',
+  'qiaomu-reader-dsh': 'Qiaomu Reader',
+  'qiaomu-ui-learn-dsh': 'Qiaomu UI Learn',
+  'qiaomu-home-dsh': 'Qiaomu Home',
+  'dsh-spotlight': 'Spotlight',
+  'dsh-quick-open': 'Quick Open',
+  'dsh-oh-my-terminal': 'Oh My Terminal',
+  'dsh-our-free-model': 'Our Free Model',
+}
+
+/**
+ * 各插件的项目图标，直接引用其所在仓库的图标文件（按收录版本的提交固定）；
+ * 项目未提供图标的（乔木 RSS、Spotlight、Quick Open）使用作者 GitHub 头像。
+ * 全部 URL 已用 curl 核实（200，2026-10-30）。
+ */
+const INDEX_ICONS: Record<string, string> = {
+  'deepseekbox-plugin-center':
+    'https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/icons/deepseekbox-plugin-center.svg',
+  'qiaomu-rss-dsh': 'https://github.com/joeseesun.png',
+  'qiaomu-reader-dsh':
+    'https://raw.githubusercontent.com/joeseesun/qiaomu-reader-dsh/af0a5a283deee91157efd42eeb2b06372c79b230/icon.svg',
+  'qiaomu-ui-learn-dsh':
+    'https://raw.githubusercontent.com/joeseesun/qiaomu-ui-learn-dsh/80ac9520f19bfdea79a906f5134d80a2bf68a099/icon.svg',
+  'qiaomu-home-dsh':
+    'https://raw.githubusercontent.com/joeseesun/qiaomu-home-dsh/45f0c1af9b7dacce424eb87c80d4f3a3c5ab4f70/icon.svg',
+  'dsh-spotlight': 'https://github.com/0xsline.png',
+  'dsh-quick-open': 'https://github.com/asxiuxiu.png',
+  'dsh-oh-my-terminal':
+    'https://raw.githubusercontent.com/btsd321/dsh-oh-my-terminal/e40df7b16a162b4df57bd9f77001474d347da748/icon.jpg',
+  'dsh-our-free-model':
+    'https://raw.githubusercontent.com/Ebony-Vinyl/dsh-our-free-model/e1b347aec9cc956eda70a766219f028a811078e2/icon.svg',
 }
 
 /**
@@ -101,6 +143,7 @@ const CATEGORY_BY_PLUGIN: Record<string, string> = {
  * 收录新插件或升版时必须同步登记，缺失时构建直接报错。
  */
 const VERSION_SOURCES: Record<string, { publishTimestamp: number; commit: string }> = {
+  'deepseekbox-plugin-center': { publishTimestamp: 1793318933, commit: '26f9321ada24ceff750e9e565d91bef3e519c52d' }, // 本仓库 main；postbuild 由 scripts/sync-self-entry.mjs 同步到最新提交
   'qiaomu-rss-dsh': { publishTimestamp: 1793168802, commit: '7f2deb7ed9583675927663de74d97f70b277c52e' }, // release v0.9.2 · 2026-10-28T06:26:42Z
   'qiaomu-reader-dsh': { publishTimestamp: 1793158004, commit: 'af0a5a283deee91157efd42eeb2b06372c79b230' }, // release v1.1.1 · 2026-10-28T03:26:44Z
   'qiaomu-ui-learn-dsh': { publishTimestamp: 1793158013, commit: '80ac9520f19bfdea79a906f5134d80a2bf68a099' }, // release v0.1.2 · 2026-10-28T03:26:53Z
@@ -124,11 +167,13 @@ export function buildPluginCatalogIndex(): PluginCatalogIndex {
       const url = `https://github.com/${plugin.repo}`
       return {
         name: plugin.id,
-        title: `${plugin.repo}`,
+        title: { zh: plugin.name, en: TITLE_EN[plugin.id] ?? plugin.name },
         description: {
           en: DESCRIPTIONS_EN[plugin.id] ?? plugin.description,
           zh: plugin.description,
         },
+        author: authorLabel(plugin.author, plugin.authorName, true),
+        icon: INDEX_ICONS[plugin.id],
         homepage: url,
         repository: { url },
         metadata: {
