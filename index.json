@@ -59,7 +59,7 @@
       },
       "description": {
         "en": "The DeepSeek Harness plugin center: reads and writes the live plugin state (install, enable, remove, index sources); also published as the DeepSeekBox catalog index.",
-        "zh": "DeepSeek Harness 插件中心：直接读写真实插件状态（安装、启停、卸载、索引源），同时作为官方收录索引源发布。"
+        "zh": "DeepSeek Harness 插件中心：直接读写真实插件状态（安装、启停、卸载、索引源），打开即提示可更新版本；同时作为官方收录索引源发布。"
       },
       "author": "Wcof",
       "icon": "https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/icons/deepseekbox-plugin-center.svg",
@@ -78,12 +78,12 @@
       },
       "versions": [
         {
-          "version": "0.3.0",
-          "publishTimestamp": 1793325896,
+          "version": "0.3.1",
+          "publishTimestamp": 1793326651,
           "source": {
             "type": "git",
             "url": "https://github.com/Wcof/DeepSeekBox",
-            "commit": "74f54e46275b6eb6cb5278b61de2fe5ef215ade7"
+            "commit": "97a34e4c4ed0454873ba495c4e49e106e6c79f37"
           },
           "engines": {}
         }
