@@ -116,6 +116,7 @@ interface RawMarketEntry {
 interface RawSearchResult {
   url: string
   title: Localized
+  fetchedAt?: number
   entries: RawMarketEntry[]
   total: number
   nextOffset: number | null
@@ -125,6 +126,10 @@ function localized(value: Localized | undefined): string | undefined {
   if (typeof value === 'string') return value
   if (value === undefined) return undefined
   return value.zh ?? value.en ?? Object.values(value)[0]
+}
+
+function hasOfficialMark(metadata: RawMarketEntry['metadata']): boolean {
+  return (metadata.labels ?? []).includes('official') || (metadata.keywords ?? []).includes('official')
 }
 
 // ============ 本地组合包 ============
@@ -210,11 +215,23 @@ export async function setIndexes(urls: string[]): Promise<void> {
   await rpc<null>('setIndexes', { urls })
 }
 
-/** 读一个索引源的一页插件；关掉缓存以便「刷新」真的重新拉取 */
+/** 拉一页索引条目；offset / fetchedAt 由调用方串起来翻页 */
 export async function searchIndex(
   url: string,
-  query: { text?: string; offset?: number; limit?: number; refresh?: boolean } = {},
-): Promise<{ entries: MarketEntry[]; indexTitle: string; total: number; nextOffset: number | null }> {
+  query: {
+    text?: string
+    offset?: number
+    limit?: number
+    refresh?: boolean
+    fetchedAt?: number
+  } = {},
+): Promise<{
+  entries: MarketEntry[]
+  indexTitle: string
+  total: number
+  nextOffset: number | null
+  fetchedAt?: number
+}> {
   const result = await rpc<RawSearchResult>('searchMarket', {
     url,
     query: {
@@ -223,6 +240,7 @@ export async function searchIndex(
       offset: query.offset ?? 0,
       limit: query.limit ?? 100,
       refresh: query.refresh === true,
+      ...(query.fetchedAt === undefined ? {} : { fetchedAt: query.fetchedAt }),
     },
   })
 
@@ -250,7 +268,9 @@ export async function searchIndex(
       repository: entry.repository?.url,
       category: entry.metadata.category,
       keywords: entry.metadata.keywords ?? [],
-      label: (entry.metadata.keywords ?? []).includes('official') ? 'official' : 'third-party',
+      labels: entry.metadata.labels ?? [],
+      // 官方/第三方以宿主的 labels 为准，本 Box 自己的索引把标记写在 keywords 里
+      label: hasOfficialMark(entry.metadata) ? 'official' : 'third-party',
       defaultVersion: entry.defaultVersion ?? preferred?.version,
       versions,
       installation: entry.installation,
@@ -259,5 +279,11 @@ export async function searchIndex(
     }
   })
 
-  return { entries, indexTitle, total: result.total, nextOffset: result.nextOffset }
+  return {
+    entries,
+    indexTitle,
+    total: result.total,
+    nextOffset: result.nextOffset,
+    fetchedAt: result.fetchedAt,
+  }
 }

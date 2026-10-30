@@ -64,7 +64,7 @@ const CATEGORIES: Record<string, IndexCategory> = {
 
 /** 每个收录插件的英文描述（与中文描述同义） */
 const DESCRIPTIONS_EN: Record<string, string> = {
-  'deepseekbox-plugin-center':
+  'deepseek-box':
     'The DeepSeek Harness plugin center: reads and writes the live plugin state (install, enable, remove, index sources); also published as the DeepSeekBox catalog index.',
   'qiaomu-rss-dsh':
     'Read RSS in DeepSeek Harness with native AI companion reading; supports OPML import/export and podcast transcript reading.',
@@ -85,7 +85,7 @@ const DESCRIPTIONS_EN: Record<string, string> = {
 }
 
 const CATEGORY_BY_PLUGIN: Record<string, string> = {
-  'deepseekbox-plugin-center': 'tools',
+  'deepseek-box': 'tools',
   'qiaomu-rss-dsh': 'reading',
   'qiaomu-reader-dsh': 'reading',
   'qiaomu-ui-learn-dsh': 'learning',
@@ -98,7 +98,7 @@ const CATEGORY_BY_PLUGIN: Record<string, string> = {
 
 /** 英文展示名（title 的 en 键；zh 键使用收录库的展示名称） */
 const TITLE_EN: Record<string, string> = {
-  'deepseekbox-plugin-center': 'DeepSeekBox Plugin Center',
+  'deepseek-box': 'DeepSeekBox Plugin Center',
   'qiaomu-rss-dsh': 'Qiaomu RSS',
   'qiaomu-reader-dsh': 'Qiaomu Reader',
   'qiaomu-ui-learn-dsh': 'Qiaomu UI Learn',
@@ -115,7 +115,7 @@ const TITLE_EN: Record<string, string> = {
  * 全部 URL 已用 curl 核实（200，2026-10-30）。
  */
 const INDEX_ICONS: Record<string, string> = {
-  'deepseekbox-plugin-center':
+  'deepseek-box':
     'https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/icons/deepseekbox-plugin-center.svg',
   'qiaomu-rss-dsh': 'https://github.com/joeseesun.png',
   'qiaomu-reader-dsh':
@@ -143,7 +143,7 @@ const INDEX_ICONS: Record<string, string> = {
  * 收录新插件或升版时必须同步登记，缺失时构建直接报错。
  */
 const VERSION_SOURCES: Record<string, { publishTimestamp: number; commit: string }> = {
-  'deepseekbox-plugin-center': { publishTimestamp: 1793318933, commit: '26f9321ada24ceff750e9e565d91bef3e519c52d' }, // 本仓库 main；postbuild 由 scripts/sync-self-entry.mjs 同步到最新提交
+  'deepseek-box': { publishTimestamp: 1793318933, commit: '26f9321ada24ceff750e9e565d91bef3e519c52d' }, // 本仓库 main；postbuild 由 scripts/sync-self-entry.mjs 同步到最新提交
   'qiaomu-rss-dsh': { publishTimestamp: 1793168802, commit: '7f2deb7ed9583675927663de74d97f70b277c52e' }, // release v0.9.2 · 2026-10-28T06:26:42Z
   'qiaomu-reader-dsh': { publishTimestamp: 1793158004, commit: 'af0a5a283deee91157efd42eeb2b06372c79b230' }, // release v1.1.1 · 2026-10-28T03:26:44Z
   'qiaomu-ui-learn-dsh': { publishTimestamp: 1793158013, commit: '80ac9520f19bfdea79a906f5134d80a2bf68a099' }, // release v0.1.2 · 2026-10-28T03:26:53Z

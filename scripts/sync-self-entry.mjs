@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * 把「插件中心」自身条目同步到当前 main 提交：
- * index.json 里的 deepseekbox-plugin-center 指向本仓库构建时的 HEAD
+ * index.json 里的 deepseek-box 指向本仓库构建时的 HEAD
  * （version 取 package.json，commit / publishTimestamp 取 git）。
  * 必须在 index.json 生成之后、校验之前运行。
  *
@@ -23,8 +23,8 @@ async function sync(label, url) {
     if (label === 'web/index.json') return false
     throw error
   }
-  const plugin = index.plugins.find((p) => p.name === 'deepseekbox-plugin-center')
-  if (!plugin) throw new Error(`${label} 中不存在 deepseekbox-plugin-center 条目`)
+  const plugin = index.plugins.find((p) => p.name === 'deepseek-box')
+  if (!plugin) throw new Error(`${label} 中不存在 deepseek-box 条目`)
   plugin.versions = [
     { version, publishTimestamp, source: { type: 'git', url: 'https://github.com/Wcof/DeepSeekBox', commit }, engines: {} },
   ]

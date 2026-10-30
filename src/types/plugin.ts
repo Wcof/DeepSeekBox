@@ -10,8 +10,11 @@ export type BundleOrigin = 'official' | 'third-party' | 'local'
 
 const LOCAL_SOURCE_PATTERN = /^(?:link|file|workspace|directory):|^(\.{1,2}\/|\/|~\/|[a-z]:[\\/])/i
 
-export function bundleOrigin(bundle: { official: boolean; source?: string }): BundleOrigin {
-  if (bundle.official) return 'official'
+/** DSH 自家的包都挂在这个 npm scope 下，但宿主的 official 标记只表示「随安装附带」 */
+const DSH_SCOPE = '@deepseek-ai/'
+
+export function bundleOrigin(bundle: { name: string; official: boolean; source?: string }): BundleOrigin {
+  if (bundle.official || bundle.name.startsWith(DSH_SCOPE)) return 'official'
   return LOCAL_SOURCE_PATTERN.test((bundle.source ?? '').trim()) ? 'local' : 'third-party'
 }
 
@@ -99,6 +102,7 @@ export interface MarketEntry {
   repository?: string
   category?: string
   keywords: string[]
+  labels: string[]
   label: 'official' | 'third-party'
   defaultVersion?: string
   versions: MarketVersion[]

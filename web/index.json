@@ -52,7 +52,7 @@
   },
   "plugins": [
     {
-      "name": "deepseekbox-plugin-center",
+      "name": "deepseek-box",
       "title": {
         "zh": "插件中心",
         "en": "DeepSeekBox Plugin Center"
@@ -79,11 +79,11 @@
       "versions": [
         {
           "version": "0.3.2",
-          "publishTimestamp": 1793363606,
+          "publishTimestamp": 1793363650,
           "source": {
             "type": "git",
             "url": "https://github.com/Wcof/DeepSeekBox",
-            "commit": "41cbf5c828bc06cee494e026ad9e494fd94528fc"
+            "commit": "f3ef26944b71de16ab867cead950192688578bb3"
           },
           "engines": {}
         }

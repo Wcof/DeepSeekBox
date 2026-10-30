@@ -51,7 +51,7 @@ export const OFFICIAL_REGISTRY: CreatorGroup[] = [
     creator: { id: 'Wcof', name: 'DeepSeekBox', homepage: 'https://github.com/Wcof/DeepSeekBox' },
     plugins: [
       {
-        id: 'deepseekbox-plugin-center',
+        id: 'deepseek-box',
         name: '插件中心',
         alias: 'DeepSeekBox',
         description:

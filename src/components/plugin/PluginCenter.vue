@@ -11,6 +11,9 @@ const {
   localBase,
   localStats,
   storeStats,
+  storeTruncated,
+  authorFacets,
+  setStoreAuthor,
   visibleStoreCount,
   filteredLocal,
   storeGroups,
@@ -73,9 +76,9 @@ const SUBTITLE = {
   store: '浏览已订阅索引源收录的插件，按需安装或更新',
 }
 
-/** 索引源 URL：同源 /index.json，供「插件市场」订阅 */
+/** 本包自带的索引文件：页面挂在 /deepseekbox/ 前缀下，必须用相对路径 */
 function openIndexSource(): void {
-  window.open('/index.json', '_blank', 'noopener')
+  window.open('./index.json', '_blank', 'noopener')
 }
 
 const listLoading = (tab: 'local' | 'store') =>
@@ -104,6 +107,7 @@ function clearLocalFilters(): void {
 function clearStoreFilters(): void {
   state.storeQuery = ''
   state.storeFilter = 'all'
+  state.storeAuthors = []
   void loadStore()
 }
 
@@ -391,6 +395,32 @@ function hostOf(url: string): string {
           </button>
         </div>
 
+        <div v-if="authorFacets.length > 1" class="facets">
+          <span class="facets__label">创作者</span>
+          <button
+            type="button"
+            class="chip"
+            :class="{ 'chip--active': state.storeAuthors.length === 0 }"
+            @click="state.storeAuthors = []"
+          >
+            全部
+          </button>
+          <button
+            v-for="facet in authorFacets"
+            :key="facet.author"
+            type="button"
+            class="chip"
+            :class="{ 'chip--active': state.storeAuthors.includes(facet.author) }"
+            :aria-pressed="state.storeAuthors.includes(facet.author)"
+            :title="facet.author"
+            @click="setStoreAuthor(facet.author)"
+          >
+            <span class="chip__label">{{ facet.author }}</span>
+            <span class="chip__count">{{ facet.count }}</span>
+          </button>
+          <span v-if="state.storeAuthors.length > 1" class="facets__hint">多选取任一命中</span>
+        </div>
+
         <div class="filters__tail">
           <FilterSelect
             v-model="state.storeSort"
@@ -479,6 +509,11 @@ function hostOf(url: string): string {
             <span><span class="mono">{{ hostOf(url) }}</span> 读取失败：{{ message }}</span>
           </div>
         </div>
+
+        <p v-if="storeTruncated" class="index-errors__item" role="status">
+          <AppIcon name="alert-circle" :size="16" />
+          <span>索引共 {{ storeTruncated }} 个插件，已加载 {{ state.market.length }} 个（达到单次翻页上限）</span>
+        </p>
 
         <section v-for="group in storeGroups" :key="group.url" class="store-group">
           <header class="store-group__header">
