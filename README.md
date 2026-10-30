@@ -1,15 +1,38 @@
 # DeepSeekBox
 
-DeepSeek Harness 桌面端 APP 的插件中心，同时作为一个 DSH 插件市场索引源：收录库中的插件（官方收录 + 经核实的社区插件）会生成标准索引文件，供 DeepSeek Harness「发现」页订阅浏览。
+DeepSeek Harness 桌面端 APP 的插件中心，本身是一个可安装的 DSH 插件组合包（bundle），同时作为 DSH 插件市场索引源：收录库中的插件（官方收录 + 经核实的社区插件）会生成标准索引文件，供 DeepSeek Harness「发现」页订阅浏览。
 
 ## 快速开始
 
 ```bash
 npm install
 npm run dev      # 开发服务器，http://localhost:5180
-npm run build    # 类型检查 + 构建，产物在 dist/
+npm run build    # 类型检查 + 构建，产物在 web/（随仓库提交），并跑索引与组合包校验
 npm run preview  # 本地预览构建产物
 ```
+
+## 安装到 DeepSeek Harness
+
+本包在 `package.json` 声明了 `dsh.bundle.patch`，因此可以被 DSH 当作插件管理：
+
+1. 在「发现」页添加索引源（见下节），找到「插件中心」并安装；或在插件管理里用本地目录安装本仓库路径。
+2. 安装后侧栏出现「插件中心」入口，主面板通过 `iframe` 打开 Host 半边提供的 `/deepseekbox/` 页面。
+3. 页面用的就是 `web/` 里这份 Vue 构建产物，所以改动前端后需要 `npm run build` 并提交 `web/`——git 安装路径不会执行构建。
+
+说明：`web/` 打开的是本仓库的插件中心单页应用，当前插件数据来自 `src/services/pluginService.ts` 的模拟内核；接入真实 DSH 插件管理需要换成 remote / IPC 实现。
+
+### 组合包结构
+
+| 文件 | 作用 |
+|---|---|
+| `package.json` | `dsh.bundle.patch` + `dsh.client.platform: web` + `exports` / `files` |
+| `cordis.patch.yml` | 插入一行 `deepseekbox-plugin-center` → `deepseek-box` |
+| `index.js` | Host 半边：`ctx.webServer.register({ kind: 'prefix' })` 提供 `/deepseekbox/` 静态路由 |
+| `client.js` | Client 半边：侧栏入口 + 主面板 iframe |
+| `locale/{zh,en}.json` | 插件管理器显示的标题与描述 |
+| `web/` | 前端构建产物（入口页 + 哈希资源 + `/index.json`） |
+
+`npm run validate:bundle` 会检查上述声明、patch 行、入口文件、locale 与 `web/` 资源引用；官方索引校验器不检查「是否声明了组合包」，这一步不能省。
 
 ## 插件市场索引源
 

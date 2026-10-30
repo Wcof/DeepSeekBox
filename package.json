@@ -1,13 +1,39 @@
 {
   "name": "deepseek-box",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
+  "description": "DeepSeek Harness 插件中心：浏览、下载与管理插件，并作为 DSH 插件索引源发布。",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./icon": "./icons/deepseekbox-plugin-center.svg",
+    "./locale/*.json": "./locale/*.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icons/deepseekbox-plugin-center.svg",
+    "web"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "postbuild": "cp dist/index.json index.json && node scripts/sync-self-entry.mjs && node scripts/validate-index.mjs",
+    "postbuild": "cp web/index.json index.json && node scripts/sync-self-entry.mjs && node scripts/validate-index.mjs && node scripts/validate-bundle.mjs",
     "validate:index": "node scripts/validate-index.mjs",
+    "validate:bundle": "node scripts/validate-bundle.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -18,6 +44,7 @@
     "@vitejs/plugin-vue": "^5.2.1",
     "typescript": "~5.7.2",
     "vite": "^6.0.5",
-    "vue-tsc": "^2.2.0"
+    "vue-tsc": "^2.2.0",
+    "yaml": "^2.9.1"
   }
 }

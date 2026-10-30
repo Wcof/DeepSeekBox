@@ -32,8 +32,8 @@ export const OFFICIAL_REGISTRY: CreatorGroup[] = [
         name: '插件中心',
         alias: 'DeepSeekBox',
         description:
-          'DeepSeek Harness 插件中心：浏览、下载与管理插件，检查更新与独立配置，同时作为官方收录索引源发布。',
-        version: '0.1.0',
+          'DeepSeek Harness 插件中心：浏览、下载与管理插件，检查更新与独立配置；同时作为官方收录索引源发布，本身也可作为 DSH 组合包安装。',
+        version: '0.2.0',
         author: 'Wcof',
         license: 'MIT',
         source: 'official',

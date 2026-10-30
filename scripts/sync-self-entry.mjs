@@ -4,6 +4,9 @@
  * index.json 里的 deepseekbox-plugin-center 指向本仓库构建时的 HEAD
  * （version 取 package.json，commit / publishTimestamp 取 git）。
  * 必须在 index.json 生成之后、校验之前运行。
+ *
+ * 同时同步仓库根目录与 web/ 内的两份索引：前者供发现页订阅，
+ * 后者是插件内「索引源」按钮在面板里读到的那份，两者必须一致。
  */
 import { readFile, writeFile } from 'node:fs/promises'
 import { execSync } from 'node:child_process'
@@ -12,12 +15,23 @@ const commit = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim()
 const publishTimestamp = Number.parseInt(execSync('git log -1 --format=%ct HEAD', { encoding: 'utf8' }).trim(), 10)
 const { version } = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
 
-const path = new URL('../index.json', import.meta.url)
-const index = JSON.parse(await readFile(path, 'utf8'))
-const plugin = index.plugins.find((p) => p.name === 'deepseekbox-plugin-center')
-if (!plugin) throw new Error('index.json 中不存在 deepseekbox-plugin-center 条目')
-plugin.versions = [
-  { version, publishTimestamp, source: { type: 'git', url: 'https://github.com/Wcof/DeepSeekBox', commit }, engines: {} },
-]
-await writeFile(path, `${JSON.stringify(index, null, 2)}\n`)
+async function sync(label, url) {
+  let index
+  try {
+    index = JSON.parse(await readFile(url, 'utf8'))
+  } catch (error) {
+    if (label === 'web/index.json') return false
+    throw error
+  }
+  const plugin = index.plugins.find((p) => p.name === 'deepseekbox-plugin-center')
+  if (!plugin) throw new Error(`${label} 中不存在 deepseekbox-plugin-center 条目`)
+  plugin.versions = [
+    { version, publishTimestamp, source: { type: 'git', url: 'https://github.com/Wcof/DeepSeekBox', commit }, engines: {} },
+  ]
+  await writeFile(url, `${JSON.stringify(index, null, 2)}\n`)
+  return true
+}
+
+await sync('index.json', new URL('../index.json', import.meta.url))
+await sync('web/index.json', new URL('../web/index.json', import.meta.url))
 console.log(`✓ 插件中心条目已同步：v${version} @ ${commit.slice(0, 8)} (${publishTimestamp})`)

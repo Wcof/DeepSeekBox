@@ -6,7 +6,8 @@
 
 - 插件中心（本地插件 + 插件商场两个 Tab）已完成实现并通过构建与浏览器回归验证，视觉风格与用户提供的参考图一致，插件数据来自官方收录库（乔木 / joeseesun）与第三方收录区（4 个经核实的社区 DSH 插件）。
 - 项目同时是 DSH 插件市场索引源：收录库生成 `format: 1` 标准索引，dev 与构建产物均在 `/index.json` 提供。
-- 插件内核为前端模拟层（内存 + 异步延迟），尚未接入真实 Harness 内核。
+- v0.2.0 起是可安装的 DSH 插件组合包：`dsh.bundle.patch` + Host 静态路由 `/deepseekbox/` + Client 侧栏入口，侧栏点开即用 iframe 打开现有 Vue 页面。
+- 插件内核仍为前端模拟层（内存 + 异步延迟），安装后页面上管理的是模拟数据，尚未接入真实 Harness 内核。
 
 ## 进行中
 
@@ -20,6 +21,7 @@
 
 ## 最近完成
 
+- 2026-10-30 09:45 — 修复「插件安装失败：这个包没有声明组合包，不能作为插件管理」：为插件中心补齐 DSH 组合包三件套——`package.json` 增加 `dsh.bundle.patch` / `dsh.client.platform` / `exports` / `files` 并升版 0.2.0，新建 `cordis.patch.yml`（插入 `deepseekbox-plugin-center`）、Host 半边 `index.js`（`webServer` 前缀路由服务 `web/`，含 308 补斜杠、路径穿越拒绝、未构建 503 提示）、Client 半边 `client.js`（侧栏入口 + 主面板 iframe）、`locale/{zh,en}.json` 展示元数据；构建输出从 `dist/` 改为随包提交的 `web/`，Vite 构建 base 改 `./` 以适配 `/deepseekbox/` 前缀；新增 `scripts/validate-bundle.mjs`（dsh 声明、patch 行、入口、locale、web 资源引用）并接入 postbuild，补上官方索引校验器「不检查是否声明组合包」的盲区。涉及 `package.json`、`cordis.patch.yml`、`index.js`、`client.js`、`locale/`、`vite.config.ts`、`scripts/`、`src/data/catalog.ts`、`AGENTS.md`、`README.md`。
 - 2026-10-30 08:31 — 按用户反馈完成索引三项优化：① 插件中心自身以官方插件收录并置顶（创作者 Wcof / DeepSeekBox，id `deepseekbox-plugin-center`，v0.1.0，新增 MIT LICENSE 与 `icons/deepseekbox-plugin-center.svg`，自条目由 `scripts/sync-self-entry.mjs` 在每次构建后同步到当前 main 提交）；② 索引每个插件引用其项目自有图标（乔木阅读/UI 学习/乔木 Home 的 icon.svg、终端面板 icon.jpg、免费模型 icon.svg，URL 钉到收录版本提交并 curl 核实 200；乔木 RSS、Spotlight、Quick Open 项目无图标，用作者 GitHub 头像）；③ 索引补全 `author`（authorLabel 全称）与双语 `title`（TITLE_EN 登记），`description` 保持中英双语。涉及 `src/data/catalog.ts`、`src/data/pluginIndex.ts`、`scripts/sync-self-entry.mjs`、`icons/`、`LICENSE`、`AGENTS.md`。
 - 2026-10-30 07:58 — 索引 `source.type` 修正为官方允许的 `"git"` 并引入官方校验器：`versions[].source` 从自造的 `{type:"github"}` 改为官方要求的 `{type:"git", url, commit}`（git 必须携带 40 位小写 commit SHA，取 Release tag 解包或 package.json 变更提交，8 个插件均已登记进 `VERSION_SOURCES`）；新增 devDependency `@deepseek-ai/dsh-plugin-market-index` 与 `scripts/validate-index.mjs`，postbuild 在生成索引后立即用官方校验器验证（`npm run validate:index` 可单独运行）。规则依据：deepseek-ai/deepseek-harness `packages/util/plugin-market-index` 源码。涉及 `src/data/pluginIndex.ts`、`scripts/validate-index.mjs`、`package.json`、`AGENTS.md`。
 - 2026-10-30 07:48 — 索引补齐「发现」页必需的 `publishTimestamp` 字段：`src/data/pluginIndex.ts` 新增 `PUBLISH_TIMESTAMPS` 登记表（8 个插件的真实发布时间，6 个取 Releases published_at；dsh-spotlight 未发版、dsh-quick-open 版本超前于 Release，均取 package.json 变更提交时间，gh api 核实），缺失登记时构建直接报错；AGENTS 更新登记要求。涉及 `src/data/pluginIndex.ts`、`AGENTS.md`。
@@ -30,6 +32,8 @@
 - 2026-10-29 23:59 — 新建插件中心应用：Vue 3 + Vite + TypeScript 基建、设计系统（卡片、标签、按钮、通知条、确认弹窗）、本地插件 Tab（搜索、检查更新、一键更新、本地安装、开发指南、刷新、启停/删除/配置）、插件商场 Tab（搜索、全部/可安装/已安装筛选、下载、启停、删除二次确认）、插件独立配置页、读取中/空列表/搜索无结果/错误重试状态与按钮 busy 反馈。
 
 ## 最近验证
+
+- 2026-10-30 09:45 — 验证对象为组合包与 Host 静态路由：`npm run build` 通过，postbuild 输出「✓ 插件中心条目已同步：v0.2.0」「✓ 索引通过官方校验：format 1，9 个插件」「✓ 组合包自检通过」；用假 ctx 起本地 HTTP 实测路由 13 项全过（入口页 200 且引用 `./assets/`、静态资源 200 且 `immutable`、入口页 `no-store`、`/deepseekbox` 308 补斜杠、`%2e%2e%2f` 穿越 403、原始 `../` 路径不返回 200、POST 405、HEAD 200 空体、移走 `web/` 后 503 且提示含 `npm run build`）；`node --check` 对 `index.js` / `client.js` / `sync-self-entry.mjs` 均通过；负例：拿掉 `dsh.bundle.patch` 的清单跑自检明确报「未声明 dsh.bundle.patch」并退出 1。真实 DSH 内的安装与侧栏渲染待推送后用市场安装复验。
 
 - 2026-10-30 08:31 — 验证对象为索引三项优化（npm run build + 官方校验器 + 浏览器实测）：构建通过，postbuild 输出「✓ 插件中心条目已同步：v0.1.0 @ 26f9321a」与「✓ 索引通过官方校验：format 1，9 个插件」；索引第 1 条为 deepseekbox-plugin-center（双语 title、author Wcof、icon 指向本仓库 icons/、git source 钉 HEAD），9 条全部携带 icon；浏览器实测商场分组首位为「DeepSeekBox Wcof」组的插件中心卡片，其后为乔木组；icon URL 共 8 个（5 项目自有 + 3 作者头像）curl 均 200。
 - 2026-10-30 08:07 — 验证对象为索引 git 来源修复的线上效果（curl 实测）：GitHub raw `https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json` 与 jsDelivr 按提交固定 URL（`@f43c95b…`）均返回修复后的索引（8 个插件全部 `source.type === "git"` 且 commit 为 40 位小写 SHA）；jsDelivr `@main` 分支 URL 虽经多次 purge（响应 finished/CF+FY true）仍返回旧缓存，属 jsDelivr 分支缓存 TTL 问题，已把 raw 列为推荐 URL 并在 README 记录刷新方法（`https://purge.jsdelivr.net/...`），待其 TTL 到期自然同步。

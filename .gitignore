@@ -2,6 +2,7 @@
 node_modules/
 
 # 构建产物
+# 注意：web/ 不忽略。DSH 从 git 安装组合包时不执行构建，插件前端产物必须随仓库提交。
 dist/
 dist-ssr/
 *.local
