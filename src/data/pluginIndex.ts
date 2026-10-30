@@ -65,7 +65,7 @@ const CATEGORIES: Record<string, IndexCategory> = {
 /** 每个收录插件的英文描述（与中文描述同义） */
 const DESCRIPTIONS_EN: Record<string, string> = {
   'deepseekbox-plugin-center':
-    'The DeepSeek Harness plugin center: browse, download and manage plugins with update checks and per-plugin settings; also published as the DeepSeekBox catalog index and installable as a DSH bundle.',
+    'The DeepSeek Harness plugin center: reads and writes the live plugin state (install, enable, remove, index sources); also published as the DeepSeekBox catalog index.',
   'qiaomu-rss-dsh':
     'Read RSS in DeepSeek Harness with native AI companion reading; supports OPML import/export and podcast transcript reading.',
   'qiaomu-reader-dsh':

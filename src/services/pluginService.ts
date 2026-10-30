@@ -1,175 +1,263 @@
-import type { InstalledPlugin, StorePlugin } from '../types/plugin'
-import { compareVersions } from '../types/plugin'
-import { STORE_CATALOG, createInitialInstalled } from '../data/catalog'
+import type {
+  InstalledBundle,
+  MarketEntry,
+  MarketIndexSummary,
+  MarketVersion,
+  OperationResult,
+  PluginRow,
+} from '../types/plugin'
 
 /**
- * 模拟插件内核接口层：内存状态 + 异步延迟。
- * 后续接入真实内核（IPC / HTTP）时，仅需保持本文件导出的函数签名不变。
+ * 真实插件内核接口层：浏览器侧只做一次 JSON-RPC，落到本包 Host 半边的
+ * `/deepseekbox/api/rpc`，由它在 DSH 进程里调用 pluginManager / pluginMarket 服务。
+ *
+ * 这里不做任何本地状态：每次调用都问宿主，避免 UI 与真实状态分叉。
  */
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+const ENDPOINT = './api/rpc'
+
+export class PluginApiError extends Error {
+  readonly code: string
+
+  constructor(code: string, message: string) {
+    super(message)
+    this.name = 'PluginApiError'
+    this.code = code
+  }
 }
 
-function clone<T>(value: T): T {
-  return structuredClone(value)
+interface RpcPayload<T> {
+  ok: boolean
+  result?: T
+  error?: { code?: string; message?: string; diagnostic?: string }
 }
 
-const state = {
-  installed: createInitialInstalled(),
-  catalog: clone(STORE_CATALOG),
+async function rpc<T>(method: string, params?: unknown): Promise<T> {
+  let response: Response
+  try {
+    response = await fetch(ENDPOINT, {
+      method: 'POST',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ method, params: params ?? {} }),
+    })
+  } catch {
+    throw new PluginApiError('host-unreachable', '没有连上 DSH 宿主，插件中心需要在 DeepSeek Harness 里打开')
+  }
+
+  const payload = (await response.json().catch(() => null)) as RpcPayload<T> | null
+  if (response.status === 404 || payload === null) {
+    throw new PluginApiError('host-unreachable', '没有连上 DSH 宿主，插件中心需要在 DeepSeek Harness 里打开')
+  }
+  if (!response.ok || payload.ok !== true) {
+    const code = payload.error?.code ?? 'operation-error'
+    const message = payload.error?.diagnostic ?? payload.error?.message ?? `宿主返回 ${response.status}`
+    throw new PluginApiError(code, message)
+  }
+  return payload.result as T
 }
 
-/** 插件文件扩展名白名单（本地安装校验） */
-const PLUGIN_FILE_EXT = /\.(dylib|so|dll|zip|tar\.gz|tgz|plugin)$/i
+// ============ 原始结构（DSH 远程面） ============
 
-function applyCatalogInfo(plugin: InstalledPlugin): void {
-  const entry = state.catalog.find((c) => c.id === plugin.id)
-  if (!entry) return
-  plugin.latestVersion = entry.version
-  plugin.repoLabel = plugin.repoLabel ?? entry.name
-  plugin.repoUrl = plugin.repoUrl ?? `https://github.com/${entry.repo}`
-  plugin.configSchema = plugin.configSchema ?? entry.configSchema
+type Localized = string | Record<string, string>
+
+interface RawMeta {
+  title?: Localized
+  description?: Localized
+  icon?: string
+  error?: string
 }
 
-export async function listInstalled(): Promise<InstalledPlugin[]> {
-  await sleep(500)
-  return clone(state.installed)
+interface RawBundle {
+  name: string
+  official: boolean
+  availability: 'profile' | 'installation' | 'missing'
+  version?: string
+  meta?: RawMeta
+  description?: string
+  enabled: boolean
+  installed: boolean
+  optional: boolean
+  removable: boolean
+  readOnlyReason?: 'management-required' | 'unaddressable'
+  source?: string
+  error?: { code: string; diagnostic?: string }
+  rows: Array<{ rowId: string; moduleName: string; meta?: RawMeta; entryId?: string }>
 }
 
-export async function listStoreCatalog(): Promise<StorePlugin[]> {
-  await sleep(600)
-  return clone(state.catalog)
+interface RawPlugin {
+  entryId: string
+  moduleName: string
+  meta?: RawMeta
+  enabled: boolean
+  fiberPhase: PluginRow['fiberPhase']
+  readOnlyReason?: 'management-required' | 'unaddressable'
 }
 
-/** 检查更新：返回可更新的插件 id 列表与最新已安装列表 */
-export async function checkUpdates(): Promise<{
-  updatableIds: string[]
-  installed: InstalledPlugin[]
-}> {
-  await sleep(900)
-  const updatableIds: string[] = []
-  for (const plugin of state.installed) {
-    if (plugin.status === 'missing-file') continue
-    applyCatalogInfo(plugin)
-    const entry = state.catalog.find((c) => c.id === plugin.id)
-    if (entry && compareVersions(entry.version, plugin.installedVersion) > 0) {
-      updatableIds.push(plugin.id)
-    } else {
-      delete plugin.latestVersion
+interface RawMarketEntry {
+  name: string
+  title?: Localized
+  description?: Localized
+  icon?: string
+  author?: string
+  homepage?: string
+  repository?: { url: string; directory?: string }
+  metadata: { category?: string; keywords: string[]; labels: string[] }
+  versions: Array<{
+    version: string
+    install: { spec: string; registry?: string }
+    compatibility: { compatible: boolean; requirements?: Record<string, string> }
+  }>
+  defaultVersion?: string
+  installation: { status: MarketEntry['installation']['status']; installedVersion?: string }
+}
+
+interface RawSearchResult {
+  url: string
+  title: Localized
+  entries: RawMarketEntry[]
+  total: number
+  nextOffset: number | null
+}
+
+function localized(value: Localized | undefined): string | undefined {
+  if (typeof value === 'string') return value
+  if (value === undefined) return undefined
+  return value.zh ?? value.en ?? Object.values(value)[0]
+}
+
+// ============ 本地组合包 ============
+
+/** 拉一次宿主状态，把 bundle 行与 Loader 条目对上（行本身不带启停状态） */
+export async function listBundles(): Promise<InstalledBundle[]> {
+  const [bundles, plugins] = await Promise.all([
+    rpc<RawBundle[]>('listBundles'),
+    rpc<RawPlugin[]>('listPlugins'),
+  ])
+
+  const byEntry = new Map(plugins.map((plugin) => [plugin.entryId, plugin]))
+  const byModule = new Map<string, RawPlugin>()
+  for (const plugin of plugins) {
+    if (!byModule.has(plugin.moduleName)) byModule.set(plugin.moduleName, plugin)
+  }
+
+  return bundles.map((bundle): InstalledBundle => {
+    const rows = bundle.rows.map((row): PluginRow => {
+      const entry = (row.entryId ? byEntry.get(row.entryId) : undefined) ?? byModule.get(row.moduleName)
+      return {
+        rowId: row.rowId,
+        moduleName: row.moduleName,
+        entryId: entry?.entryId,
+        title: localized(row.meta?.title) ?? row.rowId,
+        description: localized(row.meta?.description) ?? '',
+        enabled: entry?.enabled ?? false,
+        fiberPhase: entry?.fiberPhase ?? null,
+        readOnlyReason: entry?.readOnlyReason,
+      }
+    })
+
+    return {
+      name: bundle.name,
+      title: localized(bundle.meta?.title) ?? bundle.name,
+      description: localized(bundle.meta?.description) ?? bundle.description ?? '',
+      version: bundle.version,
+      icon: bundle.meta?.icon,
+      enabled: bundle.enabled,
+      installed: bundle.installed,
+      availability: bundle.availability,
+      official: bundle.official,
+      optional: bundle.optional,
+      removable: bundle.removable,
+      readOnlyReason: bundle.readOnlyReason,
+      source: bundle.source,
+      error: bundle.error,
+      rows,
     }
-  }
-  return { updatableIds, installed: clone(state.installed) }
+  })
 }
 
-/** 更新单个插件；返回更新后的插件 */
-export async function updatePlugin(id: string): Promise<InstalledPlugin> {
-  await sleep(1100)
-  const plugin = state.installed.find((p) => p.id === id)
-  const entry = state.catalog.find((c) => c.id === id)
-  if (!plugin || !entry) throw new Error(`PLUGIN_NOT_FOUND: ${id}`)
-  if (compareVersions(entry.version, plugin.installedVersion) <= 0) {
-    throw new Error(`UP_TO_DATE: ${id}`)
-  }
-  plugin.installedVersion = entry.version
-  plugin.latestVersion = entry.version
-  if (plugin.filePath) {
-    plugin.filePath = plugin.filePath.replace(
-      /-v[^/]+\.dylib$/,
-      `-v${entry.version}.dylib`,
-    )
-  }
-  return clone(plugin)
+export async function setBundleEnabled(name: string, enabled: boolean): Promise<OperationResult> {
+  return rpc<OperationResult>('setBundleEnabled', { name, enabled })
 }
 
-/** 启用 / 停用插件 */
-export async function setPluginEnabled(id: string, enabled: boolean): Promise<InstalledPlugin> {
-  await sleep(600)
-  const plugin = state.installed.find((p) => p.id === id)
-  if (!plugin) throw new Error(`PLUGIN_NOT_FOUND: ${id}`)
-  if (plugin.status === 'missing-file') {
-    throw new Error(`PLUGIN_FILE_MISSING: ${id}`)
-  }
-  plugin.status = enabled ? 'running' : 'stopped'
-  return clone(plugin)
+export async function setPluginEnabled(entryId: string, enabled: boolean): Promise<OperationResult> {
+  return rpc<OperationResult>('setPluginEnabled', { entryId, enabled })
 }
 
-/** 删除插件（含配置） */
-export async function removePlugin(id: string): Promise<void> {
-  await sleep(500)
-  const index = state.installed.findIndex((p) => p.id === id)
-  if (index < 0) throw new Error(`PLUGIN_NOT_FOUND: ${id}`)
-  state.installed.splice(index, 1)
+export async function removeBundle(name: string): Promise<OperationResult> {
+  return rpc<OperationResult>('removeBundle', { name })
 }
 
-/** 从商场安装：安装后为已停用状态 */
-export async function installFromStore(id: string): Promise<InstalledPlugin> {
-  await sleep(1000)
-  const entry = state.catalog.find((c) => c.id === id)
-  if (!entry) throw new Error(`STORE_PLUGIN_NOT_FOUND: ${id}`)
-  if (state.installed.some((p) => p.id === id)) {
-    throw new Error(`ALREADY_INSTALLED: ${id}`)
-  }
-  const plugin: InstalledPlugin = {
-    id: entry.id,
-    name: entry.name,
-    alias: entry.alias,
-    description: entry.description,
-    installedVersion: entry.version,
-    latestVersion: entry.version,
-    author: entry.author,
-    authorName: entry.authorName,
-    status: 'stopped',
-    filePath: `plugins/darwin/arm64/${entry.id}-v${entry.version}.dylib`,
-    repoLabel: entry.name,
-    repoUrl: `https://github.com/${entry.repo}`,
-    icon: entry.icon,
-    configSchema: entry.configSchema,
-    config: Object.fromEntries(
-      (entry.configSchema ?? []).map((f) => [
-        f.key,
-        f.type === 'boolean' ? false : f.type === 'number' ? 0 : f.options?.[0] ?? '',
-      ]),
-    ),
-  }
-  state.installed.push(plugin)
-  return clone(plugin)
+export async function installBundle(
+  spec: string,
+  options: { registry?: string | null; approvedBuilds?: string[] } = {},
+): Promise<OperationResult> {
+  return rpc<OperationResult>('installBundle', { spec, ...options })
 }
 
-/** 本地安装：根据选择的文件名导入插件 */
-export async function installLocalFile(fileName: string): Promise<InstalledPlugin> {
-  await sleep(900)
-  if (!PLUGIN_FILE_EXT.test(fileName)) {
-    throw new Error(`UNSUPPORTED_PLUGIN_FILE: ${fileName}`)
-  }
-  const base = fileName.replace(/\.(dylib|so|dll|zip|tar\.gz|tgz|plugin)$/i, '')
-  const id = base.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'local-plugin'
-  if (state.installed.some((p) => p.id === id)) {
-    throw new Error(`ALREADY_INSTALLED: ${id}`)
-  }
-  const plugin: InstalledPlugin = {
-    id,
-    name: base,
-    alias: base,
-    description: '通过本地安装导入的插件文件，配置为空，可在启用前进行设置。',
-    installedVersion: '0.0.1',
-    author: '本地',
-    status: 'stopped',
-    filePath: `plugins/local/${fileName}`,
-    config: {},
-  }
-  state.installed.push(plugin)
-  return clone(plugin)
+export async function hostStatus(): Promise<{ pluginManager: boolean; pluginMarket: boolean }> {
+  return rpc<{ pluginManager: boolean; pluginMarket: boolean }>('status')
 }
 
-/** 保存插件配置 */
-export async function savePluginConfig(
-  id: string,
-  config: Record<string, string | number | boolean>,
-): Promise<InstalledPlugin> {
-  await sleep(500)
-  const plugin = state.installed.find((p) => p.id === id)
-  if (!plugin) throw new Error(`PLUGIN_NOT_FOUND: ${id}`)
-  plugin.config = clone(config)
-  return clone(plugin)
+// ============ 插件商场 ============
+
+export async function listIndexes(): Promise<MarketIndexSummary[]> {
+  return rpc<MarketIndexSummary[]>('listIndexes')
+}
+
+export async function setIndexes(urls: string[]): Promise<void> {
+  await rpc<null>('setIndexes', { urls })
+}
+
+/** 读一个索引源的一页插件；关掉缓存以便「刷新」真的重新拉取 */
+export async function searchIndex(
+  url: string,
+  query: { text?: string; offset?: number; limit?: number; refresh?: boolean } = {},
+): Promise<{ entries: MarketEntry[]; indexTitle: string; total: number; nextOffset: number | null }> {
+  const result = await rpc<RawSearchResult>('searchMarket', {
+    url,
+    query: {
+      text: query.text ?? '',
+      sort: { kind: 'index' },
+      offset: query.offset ?? 0,
+      limit: query.limit ?? 100,
+      refresh: query.refresh === true,
+    },
+  })
+
+  const indexTitle = localized(result.title) ?? url
+  const entries = result.entries.map((entry): MarketEntry => {
+    const versions: MarketVersion[] = entry.versions.map((version) => ({
+      version: version.version,
+      spec: version.install.spec,
+      registry: version.install.registry,
+      compatible: version.compatibility.compatible,
+      requirements: version.compatibility.requirements,
+    }))
+    const preferred =
+      versions.find((version) => version.version === entry.defaultVersion) ??
+      versions.find((version) => version.compatible) ??
+      versions[0]
+
+    return {
+      name: entry.name,
+      title: localized(entry.title) ?? entry.name,
+      description: localized(entry.description) ?? '',
+      icon: entry.icon,
+      author: entry.author,
+      homepage: entry.homepage,
+      repository: entry.repository?.url,
+      category: entry.metadata.category,
+      keywords: entry.metadata.keywords ?? [],
+      label: (entry.metadata.keywords ?? []).includes('official') ? 'official' : 'third-party',
+      defaultVersion: entry.defaultVersion ?? preferred?.version,
+      versions,
+      installation: entry.installation,
+      indexUrl: result.url,
+      indexTitle,
+    }
+  })
+
+  return { entries, indexTitle, total: result.total, nextOffset: result.nextOffset }
 }

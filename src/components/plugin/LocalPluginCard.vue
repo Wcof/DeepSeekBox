@@ -1,82 +1,76 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { InstalledPlugin } from '../../types/plugin'
-import { authorLabel } from '../../types/plugin'
+import type { InstalledBundle } from '../../types/plugin'
 import { pluginCenter } from '../../stores/pluginCenter'
 import AppIcon from '../icons/AppIcon.vue'
-import { pluginIconName } from '../icons/pluginIcon'
+import PluginTile from './PluginTile.vue'
 
-const props = defineProps<{ plugin: InstalledPlugin }>()
+const props = defineProps<{ bundle: InstalledBundle }>()
 
-const { state, updateOne, setEnabled, removeById, openConfig, gotoStore } = pluginCenter
+const { state, updateOne, setEnabled, removeByName, openDetail, gotoStore } = pluginCenter
 
-const missing = computed(() => props.plugin.status === 'missing-file')
-const running = computed(() => props.plugin.status === 'running')
-const updatable = computed(() => pluginCenter.isUpdatable(props.plugin))
+const missing = computed(() => props.bundle.availability === 'missing')
+const running = computed(() => props.bundle.enabled)
+const updatable = computed(() => pluginCenter.isUpdatable(props.bundle))
+const locked = computed(
+  () => props.bundle.readOnlyReason !== undefined || !props.bundle.installed,
+)
 
 const busyKey = (key: string) => state.busy[key] === true
-
-const updating = computed(() => busyKey(`update:${props.plugin.id}`))
-const toggling = computed(() => busyKey(`toggle:${props.plugin.id}`))
-const removing = computed(() => busyKey(`remove:${props.plugin.id}`))
-/** 一键更新进行中时锁定单个更新，避免并发写 */
+const updating = computed(() => busyKey(`update:${props.bundle.name}`))
+const toggling = computed(() => busyKey(`toggle:${props.bundle.name}`))
+const removing = computed(() => busyKey(`remove:${props.bundle.name}`))
 const updateLocked = computed(() => updating.value || state.updatingAll)
 
 const statusTag = computed<{ text: string; class: string }>(() => {
-  if (missing.value) return { text: '未找到插件文件', class: 'tag--amber' }
+  if (missing.value) return { text: '包不可用', class: 'tag--amber' }
   if (running.value) return { text: '运行中', class: 'tag--green' }
   return { text: '已停用', class: 'tag--gray' }
 })
 
+const rowSummary = computed(() => {
+  const total = props.bundle.rows.length
+  if (total === 0) return '无可读插件行'
+  const active = props.bundle.rows.filter((row) => row.enabled).length
+  return `${active}/${total} 个插件行启用`
+})
+
 function onToggle(): void {
-  void setEnabled(props.plugin.id, !running.value)
+  void setEnabled(props.bundle.name, !running.value)
 }
 </script>
 
 <template>
   <article class="plugin-card">
     <div class="plugin-card__header">
-      <div class="plugin-card__tile">
-        <AppIcon :name="pluginIconName(plugin.icon)" :size="26" />
-      </div>
+      <PluginTile :icon="bundle.icon" />
       <div class="plugin-card__titles">
-        <div class="plugin-card__name">{{ plugin.name }}</div>
+        <div class="plugin-card__name">{{ bundle.title }}</div>
         <div class="plugin-card__subtitle">
-          {{ plugin.alias }} · <span class="mono">{{ plugin.id }}</span>
+          <span class="mono">{{ bundle.name }}</span>
         </div>
       </div>
       <div class="plugin-card__tags">
-        <span v-if="updatable" class="tag tag--amber">可更新 v{{ plugin.latestVersion }}</span>
+        <span v-if="updatable" class="tag tag--amber">可更新 v{{ bundle.latestVersion }}</span>
+        <span v-if="bundle.official && bundle.optional" class="tag tag--blue">随附</span>
         <span class="tag" :class="statusTag.class">{{ statusTag.text }}</span>
       </div>
     </div>
 
-    <p class="plugin-card__desc">{{ plugin.description }}</p>
+    <p class="plugin-card__desc">{{ bundle.description || '该组合包没有提供描述。' }}</p>
 
-    <template v-if="!missing">
-      <div class="plugin-card__meta">
-        <template v-if="updatable">
-          v{{ plugin.installedVersion }} → {{ plugin.latestVersion }} ·
-          {{ authorLabel(plugin.author, plugin.authorName) }}
-        </template>
-        <template v-else>
-          v{{ plugin.installedVersion }} · {{ authorLabel(plugin.author, plugin.authorName) }}
-        </template>
-      </div>
-      <div v-if="plugin.filePath" class="plugin-card__meta-line">
-        <span class="mono">{{ plugin.filePath }}</span>
-      </div>
-      <a
-        v-if="plugin.repoUrl"
-        class="btn btn--secondary btn--sm plugin-card__repo"
-        :href="plugin.repoUrl"
-        target="_blank"
-        rel="noopener"
-      >
-        <AppIcon name="external-link" :size="16" />
-        {{ plugin.repoLabel ?? plugin.name }}
-      </a>
-    </template>
+    <div class="plugin-card__meta">
+      <template v-if="updatable">
+        v{{ bundle.version ?? '未知' }} → {{ bundle.latestVersion }}
+      </template>
+      <template v-else>v{{ bundle.version ?? '未知' }} · {{ rowSummary }}</template>
+    </div>
+    <div v-if="bundle.source" class="plugin-card__meta-line">
+      来源: <span class="mono">{{ bundle.source }}</span>
+    </div>
+    <div v-if="bundle.error" class="plugin-card__meta-line plugin-card__meta-line--warn">
+      加载失败: {{ bundle.error.code }}
+    </div>
 
     <div class="plugin-card__divider">
       <div class="plugin-card__actions plugin-card__actions--spread">
@@ -84,15 +78,7 @@ function onToggle(): void {
           <template v-if="missing">
             <button type="button" class="btn btn--secondary btn--sm" @click="gotoStore()">
               <AppIcon name="download" :size="16" />
-              前往商店下载
-            </button>
-            <button
-              type="button"
-              class="btn btn--secondary btn--sm"
-              @click="openConfig(plugin.id)"
-            >
-              <AppIcon name="sliders" :size="16" />
-              配置
+              去商场重装
             </button>
           </template>
           <template v-else>
@@ -101,7 +87,7 @@ function onToggle(): void {
               type="button"
               class="btn btn--primary btn--sm"
               :disabled="updateLocked"
-              @click="updateOne(plugin.id)"
+              @click="updateOne(bundle.name)"
             >
               <span v-if="updating" class="spinner" />
               <AppIcon v-else name="download" :size="16" />
@@ -110,7 +96,8 @@ function onToggle(): void {
             <button
               type="button"
               class="btn btn--secondary btn--sm"
-              :disabled="toggling"
+              :disabled="toggling || bundle.readOnlyReason !== undefined"
+              :title="bundle.readOnlyReason ? '这个包是插件管理所需，不能停用' : undefined"
               @click="onToggle"
             >
               <span v-if="toggling" class="spinner" />
@@ -119,19 +106,20 @@ function onToggle(): void {
             <button
               type="button"
               class="btn btn--secondary btn--sm"
-              @click="openConfig(plugin.id)"
+              @click="openDetail(bundle.name)"
             >
               <AppIcon name="sliders" :size="16" />
-              配置
+              详情
             </button>
           </template>
         </div>
         <button
+          v-if="bundle.removable && !bundle.readOnlyReason"
           type="button"
           class="btn btn--danger-ghost btn--sm btn--icon"
-          :disabled="removing"
-          :aria-label="`删除 ${plugin.name}`"
-          @click="removeById(plugin.id)"
+          :disabled="removing || locked"
+          :aria-label="`卸载 ${bundle.title}`"
+          @click="removeByName(bundle.name)"
         >
           <span v-if="removing" class="spinner" />
           <AppIcon v-else name="trash" :size="17" />
@@ -147,5 +135,9 @@ function onToggle(): void {
   flex-direction: column;
   align-items: flex-end;
   gap: 8px;
+}
+
+.plugin-card__meta-line--warn {
+  color: var(--amber-text);
 }
 </style>

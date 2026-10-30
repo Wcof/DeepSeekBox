@@ -13,10 +13,12 @@ const {
   switchTab,
   checkUpdates,
   updateAll,
-  pickLocalFile,
+  openInstallDialog,
   openDevGuide,
   loadLocal,
   loadStore,
+  scheduleStoreSearch,
+  subscribeSelfIndex,
   gotoStore,
 } = pluginCenter
 
@@ -37,11 +39,22 @@ const listLoading = (tab: 'local' | 'store') =>
 const listError = (tab: 'local' | 'store') =>
   tab === 'local' ? state.localStatus === 'error' : state.storeStatus === 'error'
 
-const localEmpty = () =>
-  state.localStatus === 'ready' && state.localPlugins.length === 0 && !state.localQuery.trim()
+const hostOffline = () => state.hostOnline === false
 
-const storeEmpty = () =>
-  state.storeStatus === 'ready' && state.catalog.length === 0 && !state.storeQuery.trim()
+const localEmpty = () =>
+  state.localStatus === 'ready' && filteredLocal.value.length === 0 && !state.localQuery.trim()
+
+const storeEmpty = () => state.storeStatus === 'ready' && state.market.length === 0
+
+const indexErrorList = () => Object.entries(state.indexErrors)
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host
+  } catch {
+    return url
+  }
+}
 </script>
 
 <template>
@@ -80,7 +93,7 @@ const storeEmpty = () =>
             v-model="state.localQuery"
             type="search"
             class="toolbar__input"
-            placeholder="搜索名称、作者或插件 ID"
+            placeholder="搜索包名或插件行"
             aria-label="搜索本地插件"
           />
           <input
@@ -88,8 +101,9 @@ const storeEmpty = () =>
             v-model="state.storeQuery"
             type="search"
             class="toolbar__input"
-            placeholder="搜索名称、别名或作者"
+            placeholder="搜索名称、作者或关键词"
             aria-label="搜索商场插件"
+            @input="scheduleStoreSearch()"
           />
         </div>
 
@@ -126,12 +140,11 @@ const storeEmpty = () =>
         <button
           type="button"
           class="btn btn--secondary"
-          :disabled="listLoading(state.activeTab) || state.busy.installLocal"
-          @click="pickLocalFile()"
+          :disabled="state.busy.installSpec"
+          @click="openInstallDialog()"
         >
-          <span v-if="state.busy.installLocal" class="spinner" />
-          <AppIcon v-else name="download" :size="17" />
-          本地安装
+          <AppIcon name="download" :size="17" />
+          安装
         </button>
 
         <button type="button" class="btn btn--secondary" @click="openDevGuide()">
@@ -170,8 +183,14 @@ const storeEmpty = () =>
 
       <div v-else-if="listError('local')" class="state-box">
         <span class="state-box__icon"><AppIcon name="alert-circle" :size="40" /></span>
-        <span class="state-box__title">本地插件加载失败</span>
-        <span class="state-box__hint">请检查插件目录权限后重试</span>
+        <span class="state-box__title">{{ hostOffline() ? '没连上 DSH 宿主' : '本地插件加载失败' }}</span>
+        <span class="state-box__hint">
+          {{
+            hostOffline()
+              ? '插件中心要在 DeepSeek Harness 里打开；npm run dev 只用于调页面样式'
+              : '宿主返回了错误，请稍后重试'
+          }}
+        </span>
         <button type="button" class="btn btn--secondary state-box__action" @click="loadLocal()">
           重试
         </button>
@@ -179,21 +198,21 @@ const storeEmpty = () =>
 
       <div v-else-if="localEmpty()" class="state-box">
         <span class="state-box__icon"><AppIcon name="inbox" :size="40" /></span>
-        <span class="state-box__title">尚未安装任何插件</span>
-        <span class="state-box__hint">前往插件商场浏览并安装所需插件</span>
+        <span class="state-box__title">当前 profile 没有装第三方插件</span>
+        <span class="state-box__hint">去插件商场挑一个，或用「安装」直接填包名</span>
         <button type="button" class="btn btn--primary state-box__action" @click="gotoStore()">
-          前往商场下载
+          前往商场
         </button>
       </div>
 
       <div v-else-if="filteredLocal.length === 0" class="state-box">
         <span class="state-box__icon"><AppIcon name="search" :size="40" /></span>
         <span class="state-box__title">未找到匹配的插件</span>
-        <span class="state-box__hint">试试其他名称、作者或插件 ID 关键词</span>
+        <span class="state-box__hint">试试包名片段或某个插件行的名字</span>
       </div>
 
       <div v-else class="card-grid">
-        <LocalPluginCard v-for="plugin in filteredLocal" :key="plugin.id" :plugin="plugin" />
+        <LocalPluginCard v-for="bundle in filteredLocal" :key="bundle.name" :bundle="bundle" />
       </div>
     </template>
 
@@ -203,48 +222,100 @@ const storeEmpty = () =>
         <span class="state-box__title is-loading-text">读取中…</span>
       </div>
 
-      <div v-else-if="listError('store')" class="state-box">
+      <div v-else-if="listError('store') || hostOffline()" class="state-box">
         <span class="state-box__icon"><AppIcon name="alert-circle" :size="40" /></span>
-        <span class="state-box__title">插件商场加载失败</span>
-        <span class="state-box__hint">请检查网络连接后重试</span>
+        <span class="state-box__title">{{ hostOffline() ? '没连上 DSH 宿主' : '插件商场加载失败' }}</span>
+        <span class="state-box__hint">
+          {{
+            hostOffline()
+              ? '插件中心要在 DeepSeek Harness 里打开；npm run dev 只用于调页面样式'
+              : '宿主没有返回索引源列表，请稍后重试'
+          }}
+        </span>
         <button type="button" class="btn btn--secondary state-box__action" @click="loadStore()">
           重试
         </button>
       </div>
 
-      <div v-else-if="storeEmpty()" class="state-box">
+      <div v-else-if="!state.indexes.length" class="state-box">
         <span class="state-box__icon"><AppIcon name="inbox" :size="40" /></span>
-        <span class="state-box__title">商店暂无可用插件</span>
-        <span class="state-box__hint">稍后再来看看，或通过本地安装导入插件</span>
+        <span class="state-box__title">还没有配置索引源</span>
+        <span class="state-box__hint">订阅 DeepSeekBox 索引后，这里会列出它收录的插件</span>
+        <div class="state-box__actions">
+          <button
+            type="button"
+            class="btn btn--primary"
+            :disabled="state.busy.subscribe"
+            @click="subscribeSelfIndex()"
+          >
+            <span v-if="state.busy.subscribe" class="spinner" />
+            订阅 DeepSeekBox 索引
+          </button>
+          <button type="button" class="btn btn--secondary" @click="openIndexSource()">
+            查看索引文件
+          </button>
+        </div>
       </div>
 
-      <div v-else-if="storeGroups.length === 0" class="state-box">
-        <span class="state-box__icon"><AppIcon name="search" :size="40" /></span>
-        <span class="state-box__title">未找到匹配的插件</span>
-        <span class="state-box__hint">试试其他关键词，或切换筛选条件</span>
+      <div v-else-if="storeEmpty()" class="state-box">
+        <span class="state-box__icon"><AppIcon name="inbox" :size="40" /></span>
+        <span class="state-box__title">索引里没有匹配的插件</span>
+        <span class="state-box__hint">试试其他关键词，或清空搜索与筛选条件</span>
       </div>
 
       <template v-else>
-        <section v-for="group in storeGroups" :key="group.creator.id" class="store-group">
+        <div v-if="indexErrorList().length" class="index-errors">
+          <div v-for="[url, message] in indexErrorList()" :key="url" class="index-errors__item">
+            <AppIcon name="alert-circle" :size="16" />
+            <span><span class="mono">{{ hostOf(url) }}</span> 读取失败：{{ message }}</span>
+          </div>
+        </div>
+
+        <section v-for="group in storeGroups" :key="group.url" class="store-group">
           <header class="store-group__header">
-            <span class="store-group__name">{{ group.creator.name }}</span>
-            <span class="store-group__id">{{ group.creator.id }}</span>
+            <span class="store-group__name">{{ group.title }}</span>
+            <span class="store-group__id">{{ hostOf(group.url) }}</span>
             <a
-              v-if="group.creator.homepage"
               class="store-group__link"
-              :href="group.creator.homepage"
+              :href="group.url"
               target="_blank"
               rel="noopener"
-              :aria-label="`查看 ${group.creator.name} 的主页`"
+              :aria-label="`打开 ${group.title}`"
             >
               <AppIcon name="external-link" :size="14" />
             </a>
           </header>
           <div class="card-grid">
-            <StorePluginCard v-for="entry in group.plugins" :key="entry.id" :entry="entry" />
+            <StorePluginCard v-for="entry in group.entries" :key="`${group.url}${entry.name}`" :entry="entry" />
           </div>
         </section>
       </template>
     </template>
   </div>
 </template>
+
+<style scoped>
+.state-box__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.index-errors {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.index-errors__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--amber-bg);
+  color: var(--amber-text);
+  font-size: 13.5px;
+}
+</style>

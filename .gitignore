@@ -24,6 +24,7 @@ Thumbs.db
 
 # 任务临时文件
 .tmp/
+.workbuddy/
 
 # 日志
 logs/

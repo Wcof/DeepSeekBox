@@ -1,9 +1,10 @@
-import type { InstalledPlugin, StorePlugin } from '../types/plugin'
-
 /**
- * DeepSeek Harness 官方插件收录库 —— 本文件是官方收录的唯一维护入口。
+ * DeepSeek Harness 官方插件收录库 —— 本文件是索引源（index.json）的唯一维护入口。
  * 按创作者划分：收录新插件时在对应创作者的 plugins 下追加；
  * 新的创作者新增一个 CreatorGroup 分组。第三方插件不在本库维护。
+ *
+ * 注意：商场页面不再读这里的数据，它直接问 DSH 的 pluginMarket；
+ * 本库只负责生成对外发布的索引文件。
  */
 
 /** 开发指南 / 开发资料入口（待确认：如有 Harness 官方开发文档再替换） */
@@ -17,9 +18,31 @@ export interface Creator {
   homepage: string
 }
 
+/** 收录条目：字段用于生成索引，不参与运行时 */
+export interface CatalogPlugin {
+  id: string
+  name: string
+  alias: string
+  description: string
+  version: string
+  author: string
+  authorName?: string
+  license: string
+  source: 'official' | 'third-party'
+  repo: string
+  icon?: string
+  configSchema?: Array<{
+    key: string
+    label: string
+    type: 'text' | 'number' | 'boolean' | 'select'
+    options?: string[]
+    step?: number
+  }>
+}
+
 export interface CreatorGroup {
   creator: Creator
-  plugins: StorePlugin[]
+  plugins: CatalogPlugin[]
 }
 
 export const OFFICIAL_REGISTRY: CreatorGroup[] = [
@@ -32,8 +55,8 @@ export const OFFICIAL_REGISTRY: CreatorGroup[] = [
         name: '插件中心',
         alias: 'DeepSeekBox',
         description:
-          'DeepSeek Harness 插件中心：浏览、下载与管理插件，检查更新与独立配置；同时作为官方收录索引源发布，本身也可作为 DSH 组合包安装。',
-        version: '0.2.0',
+          'DeepSeek Harness 插件中心：直接读写真实插件状态（安装、启停、卸载、索引源），同时作为官方收录索引源发布。',
+        version: '0.3.0',
         author: 'Wcof',
         license: 'MIT',
         source: 'official',
@@ -193,56 +216,3 @@ export const THIRD_PARTY_REGISTRY: CreatorGroup[] = [
     ],
   },
 ]
-
-/** 按作者 ID 查找创作者 */
-export function findCreator(authorId: string) {
-  return OFFICIAL_REGISTRY.find((group) => group.creator.id === authorId)?.creator
-}
-
-/** 商场扁平目录（由官方收录库与第三方收录区派生） */
-export const STORE_CATALOG: StorePlugin[] = [
-  ...OFFICIAL_REGISTRY.flatMap((group) => group.plugins),
-  ...THIRD_PARTY_REGISTRY.flatMap((group) => group.plugins),
-]
-
-/** 初始已安装插件（模拟本地插件目录扫描结果） */
-export function createInitialInstalled(): InstalledPlugin[] {
-  return [
-    {
-      id: 'qiaomu-home-dsh',
-      name: '个人工作台',
-      alias: '乔木 Home',
-      description: '乔木 Home：让 Harness 成为一天的起点。会话搜索、今日重点、待办、记录与专注计时。',
-      installedVersion: '0.3.0',
-      author: 'joeseesun',
-      authorName: '乔木',
-      status: 'running',
-      filePath: 'plugins/darwin/arm64/qiaomu-home-dsh-v0.3.0.dylib',
-      repoLabel: '乔木 Home',
-      repoUrl: 'https://github.com/joeseesun/qiaomu-home-dsh',
-      icon: 'layout-dashboard',
-      configSchema: [
-        { key: 'startAtLogin', label: '启动 Harness 时打开工作台', type: 'boolean' },
-      ],
-      config: { startAtLogin: true },
-    },
-    {
-      id: 'qiaomu-reader-dsh',
-      name: '电子书阅读器',
-      alias: '乔木阅读',
-      description: '在 DeepSeek Harness 中阅读 EPUB、PDF、TXT，划线批注、导出阅读笔记与 AI 伴读。',
-      installedVersion: '1.1.1',
-      author: 'joeseesun',
-      authorName: '乔木',
-      status: 'stopped',
-      filePath: 'plugins/darwin/arm64/qiaomu-reader-dsh-v1.1.1.dylib',
-      repoLabel: '乔木阅读',
-      repoUrl: 'https://github.com/joeseesun/qiaomu-reader-dsh',
-      icon: 'book-open',
-      configSchema: [
-        { key: 'theme', label: '阅读主题', type: 'select', options: ['跟随系统', '浅色', '深色'] },
-      ],
-      config: { theme: '跟随系统' },
-    },
-  ]
-}

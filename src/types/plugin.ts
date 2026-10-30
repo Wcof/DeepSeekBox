@@ -1,68 +1,99 @@
-export type PluginSource = 'official' | 'third-party'
-
-/** 本地插件运行状态 */
-export type PluginStatus = 'running' | 'stopped' | 'missing-file'
-
-/** 商场筛选 */
 export type StoreFilter = 'all' | 'available' | 'installed'
 
-/** 插件配置项类型 */
-export type ConfigFieldType = 'text' | 'number' | 'boolean' | 'select'
+/** 组合包在磁盘上的可读位置：profile 依赖、随安装附带、或已缺失 */
+export type BundleAvailability = 'profile' | 'installation' | 'missing'
 
-export interface ConfigField {
-  key: string
-  label: string
-  type: ConfigFieldType
-  /** select 可选项 */
-  options?: string[]
-  /** number 输入的步长 */
-  step?: number
-  placeholder?: string
+export type ReadOnlyReason = 'management-required' | 'unaddressable'
+
+/** 组合包内的一行 Loader 插件 */
+export interface PluginRow {
+  rowId: string
+  moduleName: string
+  /** Loader 条目身份，来自 listPlugins；缺失时该行不可单独启停 */
+  entryId?: string
+  title: string
+  description: string
+  enabled: boolean
+  fiberPhase: 'failed' | 'pending' | 'active' | 'loading' | 'unloading' | null
+  readOnlyReason?: ReadOnlyReason
 }
 
-/** 商场中的插件条目 */
-export interface StorePlugin {
-  id: string
-  /** 展示名称 */
+export interface BundleError {
+  code: string
+  diagnostic?: string
+}
+
+/** 已安装（或被随附）的组合包，数据来自 DSH 的 pluginManager.listBundles */
+export interface InstalledBundle {
+  /** 包名，唯一标识 */
   name: string
-  /** 别名（如创作者使用的产品名） */
-  alias: string
+  title: string
   description: string
-  version: string
-  /** 作者 GitHub ID */
-  author: string
-  /** 作者中文名等展示名 */
-  authorName?: string
-  license: string
-  source: PluginSource
-  /** 代码仓库 owner/repo */
-  repo: string
-  /** 卡片图标名（AppIcon 支持的名称，缺省为拼图） */
+  version?: string
+  /** 包内导出的图标，data: URL */
   icon?: string
-  configSchema?: ConfigField[]
-}
-
-/** 已安装（本地）插件 */
-export interface InstalledPlugin {
-  id: string
-  name: string
-  alias: string
-  description: string
-  installedVersion: string
-  /** 检查更新后填充；与 installedVersion 不同即可更新 */
+  enabled: boolean
+  installed: boolean
+  availability: BundleAvailability
+  official: boolean
+  optional: boolean
+  removable: boolean
+  readOnlyReason?: ReadOnlyReason
+  /** profile 里保存的安装来源（git / 本地路径等） */
+  source?: string
+  error?: BundleError
+  rows: PluginRow[]
+  /** 检查更新后填充 */
   latestVersion?: string
-  author: string
-  authorName?: string
-  status: PluginStatus
-  /** 插件文件相对路径，missing-file 时为空 */
-  filePath?: string
-  /** 仓库外链展示名，如 “乔木 RSS” */
-  repoLabel?: string
-  repoUrl?: string
-  /** 卡片图标名（AppIcon 支持的名称，缺省为拼图） */
+  updateSpec?: string
+}
+
+export interface MarketVersion {
+  version: string
+  spec: string
+  registry?: string
+  compatible: boolean
+  requirements?: Record<string, string>
+}
+
+/** 索引源里的一个插件，数据来自 DSH 的 pluginMarket.search */
+export interface MarketEntry {
+  name: string
+  title: string
+  description: string
   icon?: string
-  configSchema?: ConfigField[]
-  config: Record<string, string | number | boolean>
+  author?: string
+  homepage?: string
+  repository?: string
+  category?: string
+  keywords: string[]
+  label: 'official' | 'third-party'
+  defaultVersion?: string
+  versions: MarketVersion[]
+  installation: {
+    status: 'not-installed' | 'installed' | 'update-available' | 'different-version' | 'provided'
+    installedVersion?: string
+  }
+  indexUrl: string
+  indexTitle: string
+}
+
+export interface MarketIndexSummary {
+  url: string
+  title?: string
+  error?: string
+}
+
+/** 启停 / 删除 / 安装这类操作的统一结果 */
+export interface OperationResult {
+  changed: boolean
+  application: 'cancelled' | 'failed' | 'applied' | 'restart-required' | 'overridden'
+  stage: 'remove' | 'install' | 'enable'
+  target: string
+  enabled?: boolean
+  restartReason?: string
+  error?: BundleError & { message?: string }
+  warnings?: string[]
 }
 
 /** 通知条类型 */
@@ -74,13 +105,6 @@ export interface Toast {
   text: string
 }
 
-/** 作者展示：full 显示 “id（中文名）”，否则优先中文名 */
-export function authorLabel(author: string, authorName?: string, full = false): string {
-  if (!authorName) return author
-  return full ? `${author}（${authorName}）` : authorName
-}
-
-/** 版本号比较：a > b 返回 1，a < b 返回 -1，相等返回 0 */
 export function compareVersions(a: string, b: string): number {
   const pa = a.split('.').map((n) => Number.parseInt(n, 10) || 0)
   const pb = b.split('.').map((n) => Number.parseInt(n, 10) || 0)
@@ -90,4 +114,10 @@ export function compareVersions(a: string, b: string): number {
     if (d !== 0) return d > 0 ? 1 : -1
   }
   return 0
+}
+
+/** 作者展示：full 显示 “id（中文名）”，否则优先中文名 */
+export function authorLabel(author: string, authorName?: string, full = false): string {
+  if (!authorName) return author
+  return full ? `${author}（${authorName}）` : authorName
 }

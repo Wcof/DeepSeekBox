@@ -1,7 +1,7 @@
 {
   "name": "deepseek-box",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "description": "DeepSeek Harness 插件中心：浏览、下载与管理插件，并作为 DSH 插件索引源发布。",
   "exports": {
@@ -41,6 +41,7 @@
   },
   "devDependencies": {
     "@deepseek-ai/dsh-plugin-market-index": "^0.2.1-alpha.4",
+    "@types/node": "^26.6.6",
     "@vitejs/plugin-vue": "^5.2.1",
     "typescript": "~5.7.2",
     "vite": "^6.0.5",

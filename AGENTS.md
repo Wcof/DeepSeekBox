@@ -4,28 +4,36 @@ DeepSeek Harness 桌面端 APP 的前端工程，当前包含插件中心（安�
 
 ## 核心目录与职责
 
-- `index.js` —— 组合包 Host 半边：`apply(ctx)` 用 `ctx.webServer.register({ kind: 'prefix' })` 把 `web/` 挂在 `/deepseekbox/`，只读静态文件，不碰用户数据。
+- `index.js` —— 组合包 Host 半边：`apply(ctx)` 用 `ctx.webServer.register({ kind: 'prefix' })` 把 `web/` 挂在 `/deepseekbox/`；同前缀下的 `/deepseekbox/api/rpc` 是 JSON-RPC 端点，把页面操作转给 DSH 的 `pluginManager` / `pluginMarket` 服务。
 - `client.js` —— 组合包 Client 半边：`window.__ModuleLoader__.load` 注册侧栏入口（`sidebar.panellist`）与主面板（`main`），面板内用同源 iframe 打开 `/deepseekbox/`。
 - `cordis.patch.yml` —— 组合包 patch，插入一行 `id: deepseekbox-plugin-center` / `name: deepseek-box`。
 - `locale/` —— 插件管理器读取的双语展示元数据（`meta.title` / `meta.description`）。
 - `web/` —— 插件前端的构建产物，随仓库提交（DSH 从 git 安装时不执行构建，缺了会 503）。
-- `src/types/plugin.ts` —— 插件领域类型与纯函数（版本比较、作者展示），不依赖 UI。
-- `src/data/catalog.ts` —— 插件收录库的唯一维护入口（官方收录库 + 第三方收录区，按创作者划分）；含初始本地插件与开发资料链接。
+- `src/types/plugin.ts` —— 插件领域类型与纯函数（版本比较、作者展示），不依赖 UI；`InstalledBundle` / `MarketEntry` 对应宿主返回结构。
+- `src/data/catalog.ts` —— 索引源（`index.json`）的收录库，按创作者划分；只服务对外发布的索引，不参与运行时。
 - `src/data/pluginIndex.ts` —— 插件市场索引源生成器：从收录库生成 DSH 插件索引（format 1，含 author / 双语 title / 项目图标 / 版本来源），供「发现」页订阅。
-- `scripts/` —— `validate-index.mjs`（官方校验器验证 index.json）、`validate-bundle.mjs`（组合包自检：dsh.bundle / patch / 入口 / locale / web 产物）、`sync-self-entry.mjs`（postbuild 同步插件中心自身条目到当前 main 提交，同时写根目录与 `web/index.json`）。
+- `scripts/` —— `validate-index.mjs`（官方校验器验证 index.json）、`validate-bundle.mjs`（组合包自检：dsh.bundle / patch / 入口 / locale / web 产物）、`sync-self-entry.mjs`（postbuild 同步插件中心自身条目到当前 main 提交，同时写根目录与 `web/index.json`）、`dev-rpc-mock.ts`（仅 dev 的假宿主，不进构建产物）。
 - `icons/` —— 本仓库自有插件（插件中心）的图标文件，索引以绝对 raw URL 引用。
-- `src/services/pluginService.ts` —— 模拟插件内核接口层（内存状态 + 异步延迟）；接入真实内核时保持导出函数签名不变，UI 层无需改动。
-- `src/stores/pluginCenter.ts` —— 插件中心唯一状态 owner（列表、搜索、筛选、busy、通知、确认弹窗），UI 只读 state 并调用 action。
-- `src/components/plugin/` —— 插件中心页面：`PluginCenter`（双 Tab + 工具栏 + 列表状态）、本地/商场卡片、独立配置页。
-- `src/components/ui/` —— 通用组件：通知条、确认弹窗、筛选下拉。
-- `src/components/icons/` —— 图标常量与插件图标映射。
+- `src/services/pluginService.ts` —— 真实内核接口层：POST `/deepseekbox/api/rpc`，方法名与 Host 半边一一对应；不做本地缓存。
+- `src/stores/pluginCenter.ts` —— 插件中心唯一状态 owner（列表、搜索、筛选、busy、通知、确认弹窗），每次操作后回读宿主。
+- `src/components/plugin/` —— 插件中心页面：`PluginCenter`（双 Tab + 工具栏 + 列表状态）、`LocalPluginCard`（组合包）、`StorePluginCard`（索引条目）、`PluginDetailPage`（包信息 + 逐行启停）、`PluginTile`。
+- `src/components/ui/` —— 通用组件：通知条、确认弹窗、筛选下拉、安装对话框。
+- `src/components/icons/` —— 图标常量。
 - `src/styles/global.css` —— 设计令牌与全局样式（按钮、标签、卡片、弹窗、通知条）。
 
 ## 技术栈与命令
 
 - Vue 3 `<script setup>` + TypeScript + Vite；不引入 UI 组件库与路由库，样式手写。
-- `npm run dev`（端口 5180）、`npm run build`（vue-tsc 类型检查 + 构建，postbuild 依次跑索引校验与组合包自检）、`npm run preview`。
+- `npm run dev`（端口 5180，`scripts/dev-rpc-mock.ts` 顶替宿主提供 `/api/rpc` 假数据）、`npm run build`（vue-tsc 类型检查 + 构建，postbuild 依次跑索引校验与组合包自检）、`npm run preview`。
 - `npm run validate:bundle` 单独跑组合包自检；改动 `package.json` / `cordis.patch.yml` / `index.js` / `client.js` / `locale/` 后必跑。
+
+## 真实数据链路
+
+- 页面只认 `pluginService`；它把每个动作翻译成 `POST /deepseekbox/api/rpc` 的 `{ method, params }`，**不保存任何本地插件状态**。
+- Host 半边的方法表（`API_METHODS`）：`status`、`listBundles`、`listPlugins`、`setBundleEnabled`、`setPluginEnabled`、`removeBundle`、`installBundle`、`listIndexes`、`setIndexes`、`searchMarket`。
+- 服务来源：`ctx.get('pluginManager')` 与 `ctx.get('pluginMarket')`，都是 DSH 自带的远程面实现；缺失时返回 503 `service-unavailable`，页面显示「当前 profile 没有装载插件管理服务」。
+- 安全：只接受 POST + 同源（`sec-fetch-site` 非 `cross-site`，`origin` 主机须与 `host` 一致），请求体上限 512 KiB。
+- 配置项编辑不在远程面里（只有模型侧 `Config.listConfigs`），所以详情页只做包信息与逐行启停，不提供配置表单。
 
 ## 组合包约束
 
@@ -36,9 +44,9 @@ DeepSeek Harness 桌面端 APP 的前端工程，当前包含插件中心（安�
 
 ## 工程边界
 
-- 业务数据一律经 `pluginService`（未来为真实内核 client），UI 不直接改内存数据。
-- 插件状态（运行中 / 已停用 / 未找到插件文件）与可用操作的映射只允许在卡片组件内实现，保持两 Tab 一致。
-- 收录库分两区维护，均按创作者划分：
+- 业务数据一律经 `pluginService` 走宿主，UI 不直接改状态、不维护插件副本。
+- 组合包状态（运行中 / 已停用 / 包不可用）与可用操作的映射只允许在卡片组件内实现，保持两 Tab 一致；`readOnlyReason` 非空的包禁止停用与卸载。
+- 收录库只服务索引发布（分官方收录 / 第三方收录两区，按创作者划分）：
   - `OFFICIAL_REGISTRY`（官方收录）：首组为插件中心自身（创作者 Wcof / DeepSeekBox，发布于本仓库），其后是用户确认的插件（当前为乔木 / joeseesun 系列）；名称、别名、描述、版本、许可证需与插件仓库 README / Releases 一致。
   - `THIRD_PARTY_REGISTRY`（第三方收录）：经核实的社区 DSH 插件，标准相同——仓库真实存在、确为 DSH 插件（`dsh plugin add` 可装 / 声明 dsh.bundle），版本与许可证核对自仓库 package.json / LICENSE；展示时带「第三方」标签并按创作者分组。
 - 索引 `pluginIndex.ts` 的登记要求：
@@ -51,10 +59,11 @@ DeepSeek Harness 桌面端 APP 的前端工程，当前包含插件中心（安�
 
 ## 验证入口
 
-- 改动后运行 `npm run build`；涉及 UI 视觉时启动 `npm run dev` 并核对两个 Tab、配置页、通知条与确认弹窗。
+- 改动后运行 `npm run build`；涉及 UI 视觉时启动 `npm run dev` 并核对两个 Tab、详情页、通知条、确认弹窗与安装对话框。
 - 涉及收录库或索引时：`npm run build` 后检查 `web/index.json`（9 个插件、format 1），并用 `npm run preview` 确认 `/index.json` 可访问。
 - 涉及组合包时：`npm run validate:bundle` 必须通过；再按 Host 路由自查项验证 `/deepseekbox/` 入口页 200、静态资源 200、`/deepseekbox` 308 补斜杠、路径穿越不返回 200、缺 `web/` 时 503 带修复提示。
-- 操作路径清单：检查更新 → 一键更新、单个更新、启用/停用、删除二次确认、商场下载、本地安装、配置页保存。
+- 涉及 API 时：用假 ctx 起本地 HTTP 覆盖 `listBundles` / `setBundleEnabled` / `installBundle` / `searchMarket` 的透传、跨站与异源拒绝、未知方法 400、非 POST 405；真实链路只能在 DSH 内验证（`ctx.get('pluginManager')` 存在与否）。
+- 操作路径清单：检查更新 → 一键更新 / 单个更新、启用 / 停用组合包、卸载二次确认、商场安装与更新、按包名 / git / 本地目录安装、详情页逐行启停。
 
 ## 项目特有红线
 
@@ -62,3 +71,4 @@ DeepSeek Harness 桌面端 APP 的前端工程，当前包含插件中心（安�
 - 界面参考图只约束视觉风格，不照搬图中的示例插件与示例操作。
 - 官方索引校验器**不检查**「包是否声明了组合包」，索引通过不代表装得上；上架或升版前必须跑 `npm run validate:bundle`。
 - `web/` 是随包提交的产物，改动前端后必须重新 `npm run build` 并连同源码一起提交，不允许只提交源码。
+- 页面里不允许再出现假数据；替身只允许存在于 `scripts/dev-rpc-mock.ts`（仅 dev server 生效，不进 `web/`），且新增字段必须与宿主真实返回结构一致。

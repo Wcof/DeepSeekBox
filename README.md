@@ -19,7 +19,7 @@ npm run preview  # 本地预览构建产物
 2. 安装后侧栏出现「插件中心」入口，主面板通过 `iframe` 打开 Host 半边提供的 `/deepseekbox/` 页面。
 3. 页面用的就是 `web/` 里这份 Vue 构建产物，所以改动前端后需要 `npm run build` 并提交 `web/`——git 安装路径不会执行构建。
 
-说明：`web/` 打开的是本仓库的插件中心单页应用，当前插件数据来自 `src/services/pluginService.ts` 的模拟内核；接入真实 DSH 插件管理需要换成 remote / IPC 实现。
+页面里的数据全部来自宿主：Host 半边在 `/deepseekbox/api/rpc` 上把动作转给 DSH 的 `pluginManager` / `pluginMarket` 服务，所以「本地插件」就是当前 profile 真实的组合包，「插件商场」就是已配置索引源的真实条目，安装、启停、卸载都直接落盘。
 
 ### 组合包结构
 
@@ -27,12 +27,16 @@ npm run preview  # 本地预览构建产物
 |---|---|
 | `package.json` | `dsh.bundle.patch` + `dsh.client.platform: web` + `exports` / `files` |
 | `cordis.patch.yml` | 插入一行 `deepseekbox-plugin-center` → `deepseek-box` |
-| `index.js` | Host 半边：`ctx.webServer.register({ kind: 'prefix' })` 提供 `/deepseekbox/` 静态路由 |
+| `index.js` | Host 半边：`/deepseekbox/` 静态路由 + `/deepseekbox/api/rpc`（调 pluginManager / pluginMarket） |
 | `client.js` | Client 半边：侧栏入口 + 主面板 iframe |
 | `locale/{zh,en}.json` | 插件管理器显示的标题与描述 |
 | `web/` | 前端构建产物（入口页 + 哈希资源 + `/index.json`） |
 
 `npm run validate:bundle` 会检查上述声明、patch 行、入口文件、locale 与 `web/` 资源引用；官方索引校验器不检查「是否声明了组合包」，这一步不能省。
+
+### 开发时的假宿主
+
+`npm run dev` 里页面跑在 Vite 上，没有 DSH 宿主，`scripts/dev-rpc-mock.ts` 会用同一形状的数据顶在 `/api/rpc`（只存在于 dev server，不进 `web/`）。真实链路必须在 DSH 里验证。
 
 ## 插件市场索引源
 
