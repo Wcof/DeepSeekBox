@@ -13,6 +13,7 @@ const {
   switchTab,
   checkUpdates,
   updateAll,
+  dismissUpdateNotice,
   openInstallDialog,
   openDevGuide,
   loadLocal,
@@ -59,6 +60,28 @@ function hostOf(url: string): string {
 
 <template>
   <div class="page">
+    <div v-if="updateCount > 0 && !state.updateNoticeDismissed" class="update-notice" role="status">
+      <span class="update-notice__icon"><AppIcon name="download" :size="18" /></span>
+      <div class="update-notice__text">
+        <strong>发现 {{ updateCount }} 个可更新插件</strong>
+        <span>版本来自你订阅的索引源，更新前不会自动改动任何东西</span>
+      </div>
+      <div class="update-notice__actions">
+        <button
+          type="button"
+          class="btn btn--primary btn--sm"
+          :disabled="state.updatingAll"
+          @click="updateAll()"
+        >
+          <span v-if="state.updatingAll" class="spinner" />
+          一键更新
+        </button>
+        <button type="button" class="btn btn--secondary btn--sm" @click="dismissUpdateNotice()">
+          稍后
+        </button>
+      </div>
+    </div>
+
     <div class="page__tabs-row">
       <div class="tabs" role="tablist">
         <button
@@ -295,6 +318,42 @@ function hostOf(url: string): string {
 </template>
 
 <style scoped>
+.update-notice {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  border-radius: 12px;
+  background: var(--amber-bg);
+  color: var(--amber-text);
+}
+
+.update-notice__icon {
+  display: flex;
+  flex: none;
+}
+
+.update-notice__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13.5px;
+}
+
+.update-notice__text strong {
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.update-notice__actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+
 .state-box__actions {
   display: flex;
   gap: 10px;

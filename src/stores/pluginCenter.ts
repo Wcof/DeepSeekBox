@@ -49,6 +49,8 @@ const state = reactive({
   checkingUpdates: false,
   updatingAll: false,
   installOpen: false,
+  /** 启动时静默检查出可更新后，用户点过「稍后」就收起提示条 */
+  updateNoticeDismissed: false,
   busy: {} as Record<string, boolean>,
 
   toasts: [] as Toast[],
@@ -141,6 +143,26 @@ function withoutUpdate(bundle: InstalledBundle): InstalledBundle {
   return next
 }
 
+/**
+ * 用刚拿到的商场数据给已装组合包打「可更新」标记。
+ * 只读索引，不装任何东西；返回可更新数量。
+ */
+function applyUpdateFlags(): number {
+  const byName = new Map(state.market.map((entry) => [entry.name, entry]))
+  let count = 0
+  state.bundles = state.bundles.map((bundle) => {
+    const entry = byName.get(bundle.name)
+    if (entry?.installation.status !== 'update-available' || !entry.defaultVersion) {
+      return withoutUpdate(bundle)
+    }
+    const spec = entry.versions.find((version) => version.version === entry.defaultVersion)?.spec
+    if (!spec) return withoutUpdate(bundle)
+    count += 1
+    return { ...withoutUpdate(bundle), latestVersion: entry.defaultVersion, updateSpec: spec }
+  })
+  return count
+}
+
 // ============ 加载 ============
 
 async function loadLocal(): Promise<void> {
@@ -167,6 +189,7 @@ async function loadStore(refresh = false): Promise<void> {
     if (indexes.length === 0) {
       state.market = []
       state.storeStatus = 'ready'
+      applyUpdateFlags()
       return
     }
 
@@ -189,15 +212,21 @@ async function loadStore(refresh = false): Promise<void> {
     }
     state.market = collected
     state.storeStatus = 'ready'
+    applyUpdateFlags()
   } catch (error) {
     state.storeStatus = 'error'
     console.warn('[deepseekbox] listIndexes failed:', describe(error))
   }
 }
 
-function init(): void {
-  void loadLocal()
-  void loadStore()
+async function init(): Promise<void> {
+  // 打开即静默比一次版本：只标记「可更新」，装不装由用户决定。
+  await Promise.all([loadLocal(), loadStore()])
+  applyUpdateFlags()
+}
+
+function dismissUpdateNotice(): void {
+  state.updateNoticeDismissed = true
 }
 
 let searchTimer: ReturnType<typeof setTimeout> | undefined
@@ -236,18 +265,8 @@ async function checkUpdates(): Promise<void> {
     state.checkingUpdates = true
     try {
       await loadStore(true)
-      const byName = new Map(state.market.map((entry) => [entry.name, entry]))
-      let count = 0
-      state.bundles = state.bundles.map((bundle) => {
-        const entry = byName.get(bundle.name)
-        if (entry?.installation.status !== 'update-available' || !entry.defaultVersion) {
-          return withoutUpdate(bundle)
-        }
-        const spec = entry.versions.find((version) => version.version === entry.defaultVersion)?.spec
-        if (!spec) return withoutUpdate(bundle)
-        count += 1
-        return { ...withoutUpdate(bundle), latestVersion: entry.defaultVersion, updateSpec: spec }
-      })
+      const count = state.bundles.filter(isUpdatable).length
+      if (count > 0) state.updateNoticeDismissed = false
       toast(count > 0 ? 'success' : 'info', count > 0 ? `发现 ${count} 个可更新插件` : '已是最新版本，暂无可用更新')
     } catch (error) {
       toast('error', `检查更新失败：${describe(error)}`)
@@ -545,6 +564,7 @@ export const pluginCenter = {
   checkUpdates,
   updateOne,
   updateAll,
+  dismissUpdateNotice,
   setEnabled,
   removeByName,
 
