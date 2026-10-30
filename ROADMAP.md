@@ -30,8 +30,8 @@
 
 ## 最近验证
 
-- 2026-10-30 07:58 — 验证对象为索引 git 来源修复：`npm run build` 通过且 postbuild 内置的官方校验器（@deepseek-ai/dsh-plugin-market-index）输出「✓ 索引通过官方校验：format 1，8 个插件」；node 逐项复检 8 个条目的 `source.type === "git"`、`source.url` 为规范 https 仓库地址、`source.commit` 匹配 40 位小写十六进制、`publishTimestamp` 为整数 Unix 秒；推送后清理 jsDelivr 缓存并复检线上 URL（详见最近完成时间线）。
-- 2026-10-30 07:48 — 验证对象为索引 `publishTimestamp` 修复（npm run build + node 校验 + 线上 curl）：8 个插件的时间戳均为整数 Unix 秒且在 [0, 1e11) 内，与 gh api 核实的 Releases/提交时间一致；推送后清理 jsDelivr 缓存并复检线上 URL（详见最近完成时间线）。
+- 2026-10-30 08:07 — 验证对象为索引 git 来源修复的线上效果（curl 实测）：GitHub raw `https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json` 与 jsDelivr 按提交固定 URL（`@f43c95b…`）均返回修复后的索引（8 个插件全部 `source.type === "git"` 且 commit 为 40 位小写 SHA）；jsDelivr `@main` 分支 URL 虽经多次 purge（响应 finished/CF+FY true）仍返回旧缓存，属 jsDelivr 分支缓存 TTL 问题，已把 raw 列为推荐 URL 并在 README 记录刷新方法（`https://purge.jsdelivr.net/...`），待其 TTL 到期自然同步。
+- 2026-10-30 07:58 — 验证对象为索引 git 来源修复：`npm run build` 通过且 postbuild 内置的官方校验器（@deepseek-ai/dsh-plugin-market-index）输出「✓ 索引通过官方校验：format 1，8 个插件」；node 逐项复检 8 个条目的 `source.type === "git"`、`source.url` 为规范 https 仓库地址、`source.commit` 匹配 40 位小写十六进制、`publishTimestamp` 为整数 Unix 秒。
 - 2026-10-30 07:43 — 验证对象为线上索引源（推送 Wcof/DeepSeekBox main 后 curl 实测）：jsDelivr `https://cdn.jsdelivr.net/gh/Wcof/DeepSeekBox@main/index.json` 返回 200 `application/json`，raw `https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json` 返回 200，两处均为 `format: 1`、8 个插件（乔木 4 + 第三方 4）；同时修正提交内容：`*.tsbuildinfo` 构建缓存加入 .gitignore 并移出跟踪（amend 于推送前完成）。
 - 2026-10-30 07:13 — 验证对象为插件市场索引源（`npm run build` + `vite preview` + dev 实测）：构建零错误并输出 `dist/index.json`（8.58 kB）；node 校验索引 `format: 1`、标题「DeepSeekBox 插件索引」、8 个插件（乔木 4 + 第三方 4，版本与分类正确）、6 个分类；`vite preview` 与 dev 中间件下 `GET /index.json` 均返回 200 `application/json`；浏览器实测商场工具栏「索引源」按钮存在，应用内同源 `fetch('/index.json')` 返回 200 且 8 个插件。验证完成后 5180 / 4180 端口服务均已关闭，无残留进程。
 - 2026-10-30 00:16 — 验证对象为第三方插件收录（npm run dev，浏览器实测）：`npm run build`（含 vue-tsc）通过；商场按「乔木 joeseesun」+ 4 个第三方创作者分组展示，第三方卡片带蓝色「第三方」标签、独立图标、版本与许可证正确；下载 Oh My Terminal 后通知条「已下载 Oh My Terminal，可在本地插件中启用」，本地列表出现该插件为已停用（启用/配置/删除操作正确）；「可安装」筛选返回剩余 5 个未下载插件；官方 4 卡片状态（下载/启停/删除）不受影响。
