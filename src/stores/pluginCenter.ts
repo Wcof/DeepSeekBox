@@ -121,7 +121,12 @@ const ERROR_TEXT: Record<string, string> = {
 
 function describe(error: unknown): string {
   if (error instanceof service.PluginApiError) {
-    return ERROR_TEXT[error.code] ?? error.message
+    const text = ERROR_TEXT[error.code] ?? error.message
+    // 兼容性拒绝的 diagnostic 里带着具体未满足的版本要求，不要被固定文案吞掉
+    if (error.code === 'incompatible-version' && error.message && error.message !== text) {
+      return `${text}：${error.message}`
+    }
+    return text
   }
   return error instanceof Error ? error.message : '未知错误'
 }
@@ -157,6 +162,7 @@ function withoutUpdate(bundle: InstalledBundle): InstalledBundle {
 /**
  * 用刚拿到的商场数据给已装组合包打「可更新」标记。
  * 只读索引，不装任何东西；返回可更新数量。
+ * 默认版本与当前 DSH 不兼容时不打标记：宿主的安装前检查会拒掉它，提示「可更新」只会让人白点一次。
  */
 function applyUpdateFlags(): number {
   const byName = new Map(state.market.map((entry) => [entry.name, entry]))
@@ -166,10 +172,14 @@ function applyUpdateFlags(): number {
     if (entry?.installation.status !== 'update-available' || !entry.defaultVersion) {
       return withoutUpdate(bundle)
     }
-    const spec = entry.versions.find((version) => version.version === entry.defaultVersion)?.spec
-    if (!spec) return withoutUpdate(bundle)
+    const target = entry.versions.find((version) => version.version === entry.defaultVersion)
+    if (!target || target.compatible === false) return withoutUpdate(bundle)
     count += 1
-    return { ...withoutUpdate(bundle), latestVersion: entry.defaultVersion, updateSpec: spec }
+    return {
+      ...withoutUpdate(bundle),
+      latestVersion: entry.defaultVersion,
+      updateSpec: target.spec,
+    }
   })
   return count
 }
@@ -436,6 +446,17 @@ async function installEntry(entry: MarketEntry): Promise<void> {
     const target = entry.versions.find((item) => item.version === version)
     if (!target) {
       toast('warning', '这个插件没有可安装的版本')
+      return
+    }
+    // 宿主的安装前检查会按真实 package.json 拒绝不兼容版本并回滚，这里先拦一次，省掉一轮安装卸载
+    if (target.compatible === false) {
+      const range = target.requirements?.['engines.dsh']
+      toast(
+        'warning',
+        range
+          ? `${entry.title} v${version} 要求 DSH ${range}，当前宿主不满足，装不进去`
+          : `${entry.title} v${version} 与当前 DSH 版本不兼容，装不进去`,
+      )
       return
     }
     try {

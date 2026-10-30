@@ -13,7 +13,10 @@ import { execSync } from 'node:child_process'
 
 const commit = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim()
 const publishTimestamp = Number.parseInt(execSync('git log -1 --format=%ct HEAD', { encoding: 'utf8' }).trim(), 10)
-const { version } = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
+const { version, engines } = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
+
+/** 自身条目的 DSH 版本要求同样取自 package.json，不写死空对象 */
+const enginesDsh = typeof engines?.dsh === 'string' ? engines.dsh : undefined
 
 async function sync(label, url) {
   let index
@@ -26,7 +29,12 @@ async function sync(label, url) {
   const plugin = index.plugins.find((p) => p.name === 'deepseek-box')
   if (!plugin) throw new Error(`${label} 中不存在 deepseek-box 条目`)
   plugin.versions = [
-    { version, publishTimestamp, source: { type: 'git', url: 'https://github.com/Wcof/DeepSeekBox', commit }, engines: {} },
+    {
+      version,
+      publishTimestamp,
+      source: { type: 'git', url: 'https://github.com/Wcof/DeepSeekBox', commit },
+      engines: enginesDsh === undefined ? {} : { dsh: enginesDsh },
+    },
   ]
   await writeFile(url, `${JSON.stringify(index, null, 2)}\n`)
   return true

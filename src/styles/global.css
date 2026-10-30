@@ -360,6 +360,12 @@ button {
   color: var(--amber-text);
 }
 
+/* 版本要求（如 0.2.1-rc.2 || 0.2.1-rc.3）不能被折断成横向溢出 */
+.plugin-card__fact--warn > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .plugin-card__divider {
   margin-top: auto;
   padding-top: 16px;

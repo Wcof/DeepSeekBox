@@ -20,6 +20,15 @@ const preferredVersion = computed(
 
 const incompatible = computed(() => preferredVersion.value?.compatible === false)
 
+/** 宿主给出的未满足要求，键为 engines.dsh 或 DSH peer 包名 */
+const requiredRange = computed(() => preferredVersion.value?.requirements?.['engines.dsh'])
+
+const incompatibilityText = computed(() =>
+  requiredRange.value
+    ? `与当前 DSH 版本不兼容（这个版本要求 DSH ${requiredRange.value}）`
+    : '与当前 DSH 版本不兼容',
+)
+
 const installedVersion = computed(() => props.entry.installation.installedVersion)
 
 const status = computed<{ text: string; class: string }>(() => {
@@ -86,7 +95,11 @@ const repositoryLabel = computed(() => {
       </div>
       <div v-if="incompatible" class="plugin-card__fact plugin-card__fact--warn">
         <span><AppIcon name="alert-circle" :size="14" /></span>
-        <span>与当前 DSH 版本不兼容</span>
+        <span>
+          与当前 DSH 版本不兼容<template v-if="requiredRange"
+            >，这个版本要求 DSH <span class="mono">{{ requiredRange }}</span></template
+          >
+        </span>
       </div>
     </div>
 
@@ -115,6 +128,7 @@ const repositoryLabel = computed(() => {
             type="button"
             class="btn btn--primary btn--sm"
             :disabled="installing || incompatible"
+            :title="incompatible ? incompatibilityText : undefined"
             @click="installEntry(entry)"
           >
             <span v-if="installing" class="spinner" />

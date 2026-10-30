@@ -20,7 +20,8 @@ interface IndexVersion {
   version: string
   publishTimestamp: number
   source: { type: 'git'; url: string; commit: string }
-  engines: Record<string, string>
+  /** 与包自身 engines 对应；索引格式只定义 dsh，缺省表示该版本未声明 DSH 版本要求 */
+  engines: { dsh?: string }
 }
 
 interface IndexPlugin {
@@ -140,18 +141,42 @@ const INDEX_ICONS: Record<string, string> = {
  * 数据来源（gh api 核实于 2026-10-30）：publishTimestamp 取 Releases latest 的 published_at，
  * 未发 Release 或 Release 落后于收录版本的（dsh-spotlight、dsh-quick-open）取 package.json
  * 最后一次变更提交的 committer.date；commit 取 Release tag / 变更提交的完整 SHA。
- * 收录新插件或升版时必须同步登记，缺失时构建直接报错。
+ *
+ * enginesDsh 必须镜像该 commit 上 package.json 的 `engines.dsh`（原样抄写，不做范围加工），
+ * 包没声明就整个省略——索引里缺省的含义是「任意 DSH 版本」，写成 {} 等于向市场宣称无要求。
+ * 宿主装完会用 `semver.satisfies(运行时版本, engines.dsh, { includePrerelease: true })` 复核，
+ * 索引漏登记时市场照常显示「安装」，用户点下去才在安装阶段被拒并回滚。
+ * 值已逐条用 curl 拉取对应 commit 的 package.json 核实（2026-10-31）。
  */
-const VERSION_SOURCES: Record<string, { publishTimestamp: number; commit: string }> = {
+const VERSION_SOURCES: Record<
+  string,
+  { publishTimestamp: number; commit: string; enginesDsh?: string }
+> = {
   'deepseek-box': { publishTimestamp: 1793318933, commit: '26f9321ada24ceff750e9e565d91bef3e519c52d' }, // 本仓库 main；postbuild 由 scripts/sync-self-entry.mjs 同步到最新提交
-  'qiaomu-rss-dsh': { publishTimestamp: 1793168802, commit: '7f2deb7ed9583675927663de74d97f70b277c52e' }, // release v0.9.2 · 2026-10-28T06:26:42Z
-  'qiaomu-reader-dsh': { publishTimestamp: 1793158004, commit: 'af0a5a283deee91157efd42eeb2b06372c79b230' }, // release v1.1.1 · 2026-10-28T03:26:44Z
-  'qiaomu-ui-learn-dsh': { publishTimestamp: 1793158013, commit: '80ac9520f19bfdea79a906f5134d80a2bf68a099' }, // release v0.1.2 · 2026-10-28T03:26:53Z
-  'qiaomu-home-dsh': { publishTimestamp: 1793157999, commit: '45f0c1af9b7dacce424eb87c80d4f3a3c5ab4f70' }, // release v0.3.1 · 2026-10-28T03:26:39Z
-  'dsh-spotlight': { publishTimestamp: 1787561813, commit: '471dee2c528bc7203669f3e540d38181b657abe4' }, // package.json 提交 · 2026-08-24T08:56:53Z
-  'dsh-quick-open': { publishTimestamp: 1791618520, commit: '81b04057d2ce6f7ad585b0d94a3de895c4f26143' }, // package.json 提交 · 2026-10-10T07:48:40Z
-  'dsh-oh-my-terminal': { publishTimestamp: 1793184490, commit: 'e40df7b16a162b4df57bd9f77001474d347da748' }, // release tag v0.4.7 解包 · 2026-10-28T10:48:10Z
-  'dsh-our-free-model': { publishTimestamp: 1792990970, commit: 'e1b347aec9cc956eda70a766219f028a811078e2' }, // release v2.7.2 · 2026-10-26T05:02:50Z
+  'qiaomu-rss-dsh': {
+    publishTimestamp: 1793168802,
+    commit: '7f2deb7ed9583675927663de74d97f70b277c52e',
+    enginesDsh: '0.2.1-rc.2 || 0.2.1-rc.3',
+  }, // release v0.9.2 · 2026-10-28T06:26:42Z
+  'qiaomu-reader-dsh': {
+    publishTimestamp: 1793158004,
+    commit: 'af0a5a283deee91157efd42eeb2b06372c79b230',
+    enginesDsh: '0.2.1-rc.2 || 0.2.1-rc.3',
+  }, // release v1.1.1 · 2026-10-28T03:26:44Z
+  'qiaomu-ui-learn-dsh': {
+    publishTimestamp: 1793158013,
+    commit: '80ac9520f19bfdea79a906f5134d80a2bf68a099',
+    enginesDsh: '0.2.1-rc.3',
+  }, // release v0.1.2 · 2026-10-28T03:26:53Z
+  'qiaomu-home-dsh': {
+    publishTimestamp: 1793157999,
+    commit: '45f0c1af9b7dacce424eb87c80d4f3a3c5ab4f70',
+    enginesDsh: '0.2.1-rc.2 || 0.2.1-rc.3',
+  }, // release v0.3.1 · 2026-10-28T03:26:39Z
+  'dsh-spotlight': { publishTimestamp: 1787561813, commit: '471dee2c528bc7203669f3e540d38181b657abe4' }, // package.json 提交 · 2026-08-24T08:56:53Z；engines 只有 node
+  'dsh-quick-open': { publishTimestamp: 1791618520, commit: '81b04057d2ce6f7ad585b0d94a3de895c4f26143' }, // package.json 提交 · 2026-10-10T07:48:40Z；无 engines，DSH 要求写在 peerDependencies
+  'dsh-oh-my-terminal': { publishTimestamp: 1793184490, commit: 'e40df7b16a162b4df57bd9f77001474d347da748' }, // release tag v0.4.7 解包 · 2026-10-28T10:48:10Z；engines 只有 node
+  'dsh-our-free-model': { publishTimestamp: 1792990970, commit: 'e1b347aec9cc956eda70a766219f028a811078e2' }, // release v2.7.2 · 2026-10-26T05:02:50Z；engines 只有 node
 }
 
 /** 生成 DSH 插件索引（format 1）；收录库更新后索引随之更新 */
@@ -161,7 +186,7 @@ export function buildPluginCatalogIndex(): PluginCatalogIndex {
       const versionSource = VERSION_SOURCES[plugin.id]
       if (versionSource === undefined) {
         throw new Error(
-          `pluginIndex: ${plugin.id} 缺少版本来源登记，请在 VERSION_SOURCES 中登记 publishTimestamp 与 commit SHA`,
+          `pluginIndex: ${plugin.id} 缺少版本来源登记，请在 VERSION_SOURCES 中登记 publishTimestamp、commit SHA 与（若包声明了）engines.dsh`,
         )
       }
       const url = `https://github.com/${plugin.repo}`
@@ -187,7 +212,8 @@ export function buildPluginCatalogIndex(): PluginCatalogIndex {
             version: plugin.version,
             publishTimestamp: versionSource.publishTimestamp,
             source: { type: 'git', url, commit: versionSource.commit },
-            engines: {},
+            engines:
+              versionSource.enginesDsh === undefined ? {} : { dsh: versionSource.enginesDsh },
           },
         ],
       }

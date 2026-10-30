@@ -120,7 +120,10 @@ export function createDevRpcMock() {
         {
           version: '0.9.2',
           install: { spec: 'git+https://github.com/joeseesun/qiaomu-rss-dsh#7f2deb7' },
-          compatibility: { compatible: true },
+          compatibility: {
+            compatible: false,
+            requirements: { 'engines.dsh': '0.2.1-rc.2 || 0.2.1-rc.3' },
+          },
         },
       ],
       defaultVersion: '0.9.2',
@@ -136,7 +139,10 @@ export function createDevRpcMock() {
         {
           version: '0.3.1',
           install: { spec: 'git+https://github.com/joeseesun/qiaomu-home-dsh#45f0c1a' },
-          compatibility: { compatible: true },
+          compatibility: {
+            compatible: false,
+            requirements: { 'engines.dsh': '0.2.1-rc.2 || 0.2.1-rc.3' },
+          },
         },
       ],
       defaultVersion: '0.3.1',
@@ -169,7 +175,7 @@ export function createDevRpcMock() {
         {
           version: '0.4.7',
           install: { spec: 'git+https://github.com/btsd321/dsh-oh-my-terminal#e40df7b' },
-          compatibility: { compatible: false, requirements: { 'engines.dsh': '>=0.3.0' } },
+          compatibility: { compatible: true },
         },
       ],
       defaultVersion: '0.4.7',

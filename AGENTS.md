@@ -51,6 +51,7 @@ DeepSeek Harness 桌面端 APP 的前端工程，当前包含插件中心（安�
   - `THIRD_PARTY_REGISTRY`（第三方收录）：经核实的社区 DSH 插件，标准相同——仓库真实存在、确为 DSH 插件（`dsh plugin add` 可装 / 声明 dsh.bundle），版本与许可证核对自仓库 package.json / LICENSE；展示时带「第三方」标签并按创作者分组。
 - 索引 `pluginIndex.ts` 的登记要求：
   - `VERSION_SOURCES`：publishTimestamp（整数 Unix 秒，Releases published_at；未发版或版本超前取 package.json 变更提交时间）+ commit（40 位小写 SHA，Release tag 解包或变更提交）；缺失时构建报错。插件中心自身条目由 `scripts/sync-self-entry.mjs` 在每次构建后同步到当前 main 提交（始终比包含它的提交旧一个提交，属预期）。
+  - `VERSION_SOURCES.enginesDsh`：必须原样镜像该 commit 上 package.json 的 `engines.dsh`（不加工范围），包没声明就省略该键。索引里**省略**表示「任意 DSH 版本」，写成 `{}` 等于向市场宣称无要求；而宿主装完仍会用 `semver.satisfies(运行时版本, engines.dsh, { includePrerelease: true })` 复核真实 package.json，漏登记的结果是市场照常显示「安装」、用户点下去才在安装阶段被拒并回滚。收录或升版时用 `curl https://raw.githubusercontent.com/<repo>/<commit>/package.json` 核对。
   - `INDEX_ICONS`：icon 一律引用插件自己项目的图标文件（其仓库内 icon.svg / icon.jpg，URL 钉到收录版本提交并经 curl 核实 200）；项目未提供图标的用作者 GitHub 头像（`https://github.com/<user>.png`）。校验器允许 ≤32 KiB 的 data URI 或解析为 https 的 URL。
   - `author` 用 `authorLabel` 全称（如 `joeseesun（乔木）`），`title` 为双语展示名（`TITLE_EN` 登记 en 键）。
 - 收录检索入口参考 awesome-dsh-plugin 清单与 GitHub topic（`deepseek-harness`、`dsh-plugin`）；非 DeepSeek Harness 宿主的插件（如 CLIProxyAPI 插件）不得收录。

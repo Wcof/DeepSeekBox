@@ -78,12 +78,12 @@
       },
       "versions": [
         {
-          "version": "0.3.2",
-          "publishTimestamp": 1793371231,
+          "version": "0.3.3",
+          "publishTimestamp": 1793371276,
           "source": {
             "type": "git",
             "url": "https://github.com/Wcof/DeepSeekBox",
-            "commit": "59410714c1ddbde043826a4f01662b0a0650e57a"
+            "commit": "7ce2395cfcdfa583f7d5913f45d23b4768c5b19e"
           },
           "engines": {}
         }
@@ -123,7 +123,9 @@
             "url": "https://github.com/joeseesun/qiaomu-rss-dsh",
             "commit": "7f2deb7ed9583675927663de74d97f70b277c52e"
           },
-          "engines": {}
+          "engines": {
+            "dsh": "0.2.1-rc.2 || 0.2.1-rc.3"
+          }
         }
       ]
     },
@@ -161,7 +163,9 @@
             "url": "https://github.com/joeseesun/qiaomu-reader-dsh",
             "commit": "af0a5a283deee91157efd42eeb2b06372c79b230"
           },
-          "engines": {}
+          "engines": {
+            "dsh": "0.2.1-rc.2 || 0.2.1-rc.3"
+          }
         }
       ]
     },
@@ -199,7 +203,9 @@
             "url": "https://github.com/joeseesun/qiaomu-ui-learn-dsh",
             "commit": "80ac9520f19bfdea79a906f5134d80a2bf68a099"
           },
-          "engines": {}
+          "engines": {
+            "dsh": "0.2.1-rc.3"
+          }
         }
       ]
     },
@@ -237,7 +243,9 @@
             "url": "https://github.com/joeseesun/qiaomu-home-dsh",
             "commit": "45f0c1af9b7dacce424eb87c80d4f3a3c5ab4f70"
           },
-          "engines": {}
+          "engines": {
+            "dsh": "0.2.1-rc.2 || 0.2.1-rc.3"
+          }
         }
       ]
     },
