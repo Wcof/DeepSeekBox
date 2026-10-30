@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { pluginCenter } from '../../stores/pluginCenter'
+import { BUNDLE_ORIGIN_LABEL, BUNDLE_ORIGIN_TAG, bundleOrigin } from '../../types/plugin'
 import AppIcon from '../icons/AppIcon.vue'
 import PluginTile from './PluginTile.vue'
 import type { PluginRow } from '../../types/plugin'
@@ -9,12 +10,14 @@ const { state, detailBundle, closeDetail, setEnabled, removeByName, setRowEnable
 
 const bundle = computed(() => detailBundle.value)
 
-const statusTag = computed<{ text: string; class: string }>(() => {
+const origin = computed(() => (bundle.value ? bundleOrigin(bundle.value) : 'third-party'))
+
+const status = computed<{ text: string; class: string }>(() => {
   const current = bundle.value
   if (!current) return { text: '', class: '' }
-  if (current.availability === 'missing') return { text: '包不可用', class: 'tag--amber' }
-  if (current.enabled) return { text: '运行中', class: 'tag--green' }
-  return { text: '已停用', class: 'tag--gray' }
+  if (current.availability === 'missing') return { text: '包不可用', class: 'status--warn' }
+  if (current.enabled) return { text: '运行中', class: 'status--running' }
+  return { text: '已停用', class: 'status--stopped' }
 })
 
 const availabilityText = computed(() => {
@@ -45,6 +48,12 @@ const phaseText = (row: PluginRow): string => {
     default:
       return '未运行'
   }
+}
+
+const phaseTag = (row: PluginRow): string => {
+  if (row.fiberPhase === 'active') return 'tag--green'
+  if (row.fiberPhase === 'failed') return 'tag--amber'
+  return 'tag--gray'
 }
 
 const toggling = computed(
@@ -82,12 +91,19 @@ function onToggleRow(row: PluginRow): void {
     </div>
 
     <header class="config-hero">
-      <PluginTile :icon="bundle.icon" />
+      <PluginTile :icon="bundle.icon" :muted="!bundle.enabled" />
       <div class="config-hero__titles">
-        <div class="config-hero__name">{{ bundle.title }}</div>
-        <div class="plugin-card__id mono">{{ bundle.name }}</div>
+        <div class="config-hero__titlerow">
+          <span class="config-hero__name">{{ bundle.title }}</span>
+          <span class="tag" :class="BUNDLE_ORIGIN_TAG[origin]">{{ BUNDLE_ORIGIN_LABEL[origin] }}</span>
+          <span v-if="bundle.official && bundle.optional" class="tag tag--gray">随附</span>
+        </div>
+        <div class="plugin-card__id">{{ bundle.name }}</div>
       </div>
-      <span class="tag" :class="statusTag.class">{{ statusTag.text }}</span>
+      <span class="status" :class="status.class">
+        <span class="status__dot" />
+        {{ status.text }}
+      </span>
     </header>
 
     <div class="config-body">
@@ -96,7 +112,7 @@ function onToggleRow(row: PluginRow): void {
         <dl class="config-info">
           <div class="config-info__row">
             <dt>版本</dt>
-            <dd>v{{ bundle.version ?? '未知' }}</dd>
+            <dd class="mono">v{{ bundle.version ?? '未知' }}</dd>
           </div>
           <div class="config-info__row">
             <dt>包名</dt>
@@ -104,7 +120,7 @@ function onToggleRow(row: PluginRow): void {
           </div>
           <div class="config-info__row">
             <dt>来源</dt>
-            <dd>{{ availabilityText }}</dd>
+            <dd>{{ BUNDLE_ORIGIN_LABEL[origin] }} · {{ availabilityText }}</dd>
           </div>
           <div v-if="bundle.source" class="config-info__row">
             <dt>安装方式</dt>
@@ -145,7 +161,10 @@ function onToggleRow(row: PluginRow): void {
       </section>
 
       <section class="config-card">
-        <h2 class="config-card__title">插件行（{{ bundle.rows.length }}）</h2>
+        <h2 class="config-card__title">
+          插件行
+          <span class="config-card__count">{{ bundle.rows.length }}</span>
+        </h2>
 
         <p v-if="bundle.rows.length === 0" class="config-card__empty">这个组合包没有可读的插件行。</p>
 
@@ -156,7 +175,7 @@ function onToggleRow(row: PluginRow): void {
               <div class="row-item__module mono">{{ row.moduleName }}</div>
               <div v-if="row.description" class="row-item__desc">{{ row.description }}</div>
             </div>
-            <span class="tag tag--gray row-item__phase">{{ phaseText(row) }}</span>
+            <span class="tag row-item__phase" :class="phaseTag(row)">{{ phaseText(row) }}</span>
             <button
               type="button"
               class="switch"
@@ -185,14 +204,19 @@ function onToggleRow(row: PluginRow): void {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding-bottom: 22px;
-  border-bottom: 1px solid var(--color-border-light);
-  margin-bottom: 24px;
+  margin-bottom: 22px;
 }
 
 .config-hero__titles {
   flex: 1;
   min-width: 0;
+}
+
+.config-hero__titlerow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .config-hero__name {
@@ -203,21 +227,35 @@ function onToggleRow(row: PluginRow): void {
 .config-body {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  max-width: 860px;
+  gap: 18px;
+  max-width: 880px;
 }
 
 .config-card {
   background: #ffffff;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
-  padding: 24px;
+  padding: 22px 24px;
+  box-shadow: var(--shadow-card);
 }
 
 .config-card__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0 0 16px;
-  font-size: 16px;
+  font-size: 15.5px;
   font-weight: 700;
+}
+
+.config-card__count {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--color-surface-hover);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .config-card__empty {
@@ -333,8 +371,8 @@ function onToggleRow(row: PluginRow): void {
 }
 
 .switch--on {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+  background: var(--green-text);
+  border-color: var(--green-text);
 }
 
 .switch__thumb {

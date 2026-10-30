@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { MarketEntry } from '../../types/plugin'
+import { MARKET_LABEL_TEXT } from '../../types/plugin'
 import { pluginCenter } from '../../stores/pluginCenter'
 import AppIcon from '../icons/AppIcon.vue'
 import PluginTile from './PluginTile.vue'
@@ -19,19 +20,21 @@ const preferredVersion = computed(
 
 const incompatible = computed(() => preferredVersion.value?.compatible === false)
 
-const labelTag = computed(() =>
-  props.entry.label === 'official'
-    ? { text: '官方收录', class: 'tag--green' }
-    : { text: '第三方', class: 'tag--blue' },
-)
+const installedVersion = computed(() => props.entry.installation.installedVersion)
 
-const statusTag = computed<{ text: string; class: string } | null>(() => {
-  const status = props.entry.installation.status
-  if (status === 'installed') return { text: '已安装', class: 'tag--gray' }
-  if (status === 'update-available') return { text: '可更新', class: 'tag--amber' }
-  if (status === 'different-version') return { text: '已装其他版本', class: 'tag--amber' }
-  if (status === 'provided') return { text: '随 DSH 提供', class: 'tag--blue' }
-  return null
+const status = computed<{ text: string; class: string }>(() => {
+  switch (props.entry.installation.status) {
+    case 'update-available':
+      return { text: '可更新', class: 'status--warn' }
+    case 'different-version':
+      return { text: '已装其他版本', class: 'status--warn' }
+    case 'installed':
+      return { text: '已安装', class: 'status--running' }
+    case 'provided':
+      return { text: '随 DSH 提供', class: 'status--running' }
+    default:
+      return { text: '可安装', class: 'status--stopped' }
+  }
 })
 
 const action = computed<'install' | 'update' | 'detail'>(() => {
@@ -52,71 +55,74 @@ const repositoryLabel = computed(() => {
     <div class="plugin-card__header">
       <PluginTile :icon="entry.icon" />
       <div class="plugin-card__titles">
-        <div class="plugin-card__name">{{ entry.title }}</div>
-        <div class="plugin-card__subtitle">
-          <span class="mono">{{ entry.name }}</span>
+        <div class="plugin-card__titlerow">
+          <span class="plugin-card__name">{{ entry.title }}</span>
+          <span
+            class="tag"
+            :class="entry.label === 'official' ? 'tag--green' : 'tag--blue'"
+          >
+            {{ MARKET_LABEL_TEXT[entry.label] }}
+          </span>
+          <span v-if="incompatible" class="tag tag--amber">版本不符</span>
         </div>
+        <div class="plugin-card__id">{{ entry.name }}</div>
       </div>
-      <div class="plugin-card__tags">
-        <span v-if="statusTag" class="tag" :class="statusTag.class">{{ statusTag.text }}</span>
-        <span class="tag" :class="labelTag.class">{{ labelTag.text }}</span>
-      </div>
+      <span class="status plugin-card__status" :class="status.class">
+        <span class="status__dot" />
+        {{ status.text }}
+      </span>
     </div>
 
     <p class="plugin-card__desc">{{ entry.description || '该插件没有提供描述。' }}</p>
 
-    <div class="plugin-card__meta">
-      v{{ entry.defaultVersion ?? preferredVersion?.version ?? '未知' }} ·
-      {{ entry.indexTitle }}
-    </div>
-    <div v-if="entry.author" class="plugin-card__meta-line">开发作者: {{ entry.author }}</div>
-    <div v-if="repositoryLabel" class="plugin-card__meta-line">
-      代码仓库: <span class="mono">{{ repositoryLabel }}</span>
-    </div>
-    <div v-if="incompatible" class="plugin-card__meta-line plugin-card__meta-line--warn">
-      与当前 DSH 版本不兼容
+    <div class="plugin-card__facts">
+      <div v-if="entry.author" class="plugin-card__fact">
+        <span><AppIcon name="users" :size="14" /></span>
+        <span>{{ entry.author }}</span>
+      </div>
+      <div v-if="repositoryLabel" class="plugin-card__fact">
+        <span><AppIcon name="link" :size="14" /></span>
+        <span class="mono">{{ repositoryLabel }}</span>
+      </div>
+      <div v-if="incompatible" class="plugin-card__fact plugin-card__fact--warn">
+        <span><AppIcon name="alert-circle" :size="14" /></span>
+        <span>与当前 DSH 版本不兼容</span>
+      </div>
     </div>
 
     <div class="plugin-card__divider">
-      <div class="plugin-card__actions plugin-card__actions--end">
-        <button
-          v-if="action === 'detail'"
-          type="button"
-          class="btn btn--secondary btn--sm"
-          @click="openDetail(entry.name)"
-        >
-          <AppIcon name="sliders" :size="16" />
-          详情
-        </button>
-        <button
-          v-else
-          type="button"
-          class="btn btn--primary btn--sm"
-          :disabled="installing || incompatible"
-          @click="installEntry(entry)"
-        >
-          <span v-if="installing" class="spinner" />
-          <AppIcon v-else :name="action === 'update' ? 'refresh' : 'download'" :size="16" />
-          {{ action === 'update' ? '更新' : '安装' }}
-        </button>
+      <div class="plugin-card__foot">
+        <span class="plugin-card__version mono">
+          v{{ entry.defaultVersion ?? preferredVersion?.version ?? '未知' }}
+        </span>
+        <template v-if="installedVersion">
+          <span class="plugin-card__dot">·</span>
+          <span class="plugin-card__rows">已装 v{{ installedVersion }}</span>
+        </template>
+
+        <span class="plugin-card__actions">
+          <button
+            v-if="action === 'detail'"
+            type="button"
+            class="btn btn--secondary btn--sm"
+            @click="openDetail(entry.name)"
+          >
+            <AppIcon name="sliders" :size="15" />
+            详情
+          </button>
+          <button
+            v-else
+            type="button"
+            class="btn btn--primary btn--sm"
+            :disabled="installing || incompatible"
+            @click="installEntry(entry)"
+          >
+            <span v-if="installing" class="spinner" />
+            <AppIcon v-else :name="action === 'update' ? 'refresh' : 'download'" :size="15" />
+            {{ action === 'update' ? '更新' : '安装' }}
+          </button>
+        </span>
       </div>
     </div>
   </article>
 </template>
-
-<style scoped>
-.plugin-card__actions--end {
-  justify-content: flex-end;
-}
-
-.plugin-card__tags {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-}
-
-.plugin-card__meta-line--warn {
-  color: var(--amber-text);
-}
-</style>

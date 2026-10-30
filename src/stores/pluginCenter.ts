@@ -1,13 +1,18 @@
 import { computed, reactive } from 'vue'
 import type {
+  BundleOrigin,
   InstalledBundle,
+  LocalFilter,
+  LocalSortKey,
   MarketEntry,
   MarketIndexSummary,
   OperationResult,
   StoreFilter,
+  StoreSortKey,
   Toast,
   ToastType,
 } from '../types/plugin'
+import { bundleOrigin } from '../types/plugin'
 import * as service from '../services/pluginService'
 import { DEV_GUIDE_URL } from '../data/catalog'
 
@@ -44,7 +49,10 @@ const state = reactive({
 
   localQuery: '',
   storeQuery: '',
+  localFilter: 'all' as LocalFilter,
   storeFilter: 'all' as StoreFilter,
+  localSort: 'status' as LocalSortKey,
+  storeSort: 'index' as StoreSortKey,
 
   checkingUpdates: false,
   updatingAll: false,
@@ -479,25 +487,92 @@ async function setRowEnabled(entryId: string, enabled: boolean): Promise<void> {
 
 // ============ 派生数据 ============
 
-/** 本地按组合包展示：已安装的在前，随附未启用的在后 */
+const byTitle = (a: { title: string }, b: { title: string }) =>
+  a.title.localeCompare(b.title, 'zh-Hans-CN')
+
+const ORIGIN_RANK: Record<BundleOrigin, number> = { official: 0, 'third-party': 1, local: 2 }
+
+const INSTALL_RANK: Record<MarketEntry['installation']['status'], number> = {
+  'not-installed': 0,
+  'update-available': 1,
+  'different-version': 2,
+  installed: 3,
+  provided: 4,
+}
+
+/** 管理 Tab 的基表：当前 profile 里已安装或随 DSH 附带的组合包 */
+const localBase = computed(() =>
+  state.bundles.filter((bundle) => bundle.installed || bundle.availability === 'installation'),
+)
+
+/** 来源统计只看基表，不随搜索与筛选变化，数字才不会跳 */
+const localStats = computed(() => {
+  const counts: Record<LocalFilter, number> = {
+    all: localBase.value.length,
+    official: 0,
+    'third-party': 0,
+    local: 0,
+  }
+  for (const bundle of localBase.value) counts[bundleOrigin(bundle)] += 1
+  return counts
+})
+
+const storeStats = computed(() => {
+  const counts: Record<StoreFilter, number> = {
+    all: state.market.length,
+    official: 0,
+    'third-party': 0,
+    installed: 0,
+    available: 0,
+  }
+  for (const entry of state.market) {
+    counts[entry.label] += 1
+    counts[entry.installation.status === 'not-installed' ? 'available' : 'installed'] += 1
+  }
+  return counts
+})
+
+function matchesLocalQuery(bundle: InstalledBundle, q: string): boolean {
+  if (!q) return true
+  return [bundle.title, bundle.name, bundle.description]
+    .concat(bundle.rows.map((row) => `${row.title} ${row.moduleName}`))
+    .some((text) => text.toLowerCase().includes(q))
+}
+
 const filteredLocal = computed(() => {
   const q = state.localQuery.trim().toLowerCase()
-  return state.bundles
-    .filter((bundle) => bundle.installed || bundle.availability === 'installation')
-    .filter((bundle) => {
-      if (!q) return true
-      return [bundle.title, bundle.name, bundle.description]
-        .concat(bundle.rows.map((row) => `${row.title} ${row.moduleName}`))
-        .some((text) => text.toLowerCase().includes(q))
-    })
-    .sort((a, b) => Number(b.enabled) - Number(a.enabled) || a.name.localeCompare(b.name))
+  const list = localBase.value.filter(
+    (bundle) =>
+      (state.localFilter === 'all' || bundleOrigin(bundle) === state.localFilter) &&
+      matchesLocalQuery(bundle, q),
+  )
+  const sorters: Record<LocalSortKey, (a: InstalledBundle, b: InstalledBundle) => number> = {
+    status: (a, b) => Number(b.enabled) - Number(a.enabled) || byTitle(a, b),
+    name: byTitle,
+    package: (a, b) => a.name.localeCompare(b.name),
+    origin: (a, b) => ORIGIN_RANK[bundleOrigin(a)] - ORIGIN_RANK[bundleOrigin(b)] || byTitle(a, b),
+  }
+  return list.sort(sorters[state.localSort])
 })
+
+function matchesStoreFilter(entry: MarketEntry): boolean {
+  switch (state.storeFilter) {
+    case 'official':
+    case 'third-party':
+      return entry.label === state.storeFilter
+    case 'available':
+      return entry.installation.status === 'not-installed'
+    case 'installed':
+      return entry.installation.status !== 'not-installed'
+    default:
+      return true
+  }
+}
 
 const storeGroups = computed(() => {
   const groups = new Map<string, { title: string; url: string; entries: MarketEntry[] }>()
   for (const entry of state.market) {
-    if (state.storeFilter === 'available' && entry.installation.status !== 'not-installed') continue
-    if (state.storeFilter === 'installed' && entry.installation.status === 'not-installed') continue
+    if (!matchesStoreFilter(entry)) continue
     const group = groups.get(entry.indexUrl) ?? {
       title: entry.indexTitle,
       url: entry.indexUrl,
@@ -506,8 +581,30 @@ const storeGroups = computed(() => {
     group.entries.push(entry)
     groups.set(entry.indexUrl, group)
   }
-  return [...groups.values()].sort((a, b) => b.entries.length - a.entries.length)
+  const sorters: Partial<Record<StoreSortKey, (a: MarketEntry, b: MarketEntry) => number>> = {
+    name: byTitle,
+    author: (a, b) => (a.author ?? '').localeCompare(b.author ?? '') || byTitle(a, b),
+    installable: (a, b) =>
+      INSTALL_RANK[a.installation.status] - INSTALL_RANK[b.installation.status] || byTitle(a, b),
+  }
+  const sorter = sorters[state.storeSort]
+  const result = [...groups.values()].sort((a, b) => b.entries.length - a.entries.length)
+  if (sorter) for (const group of result) group.entries.sort(sorter)
+  return result
 })
+
+const visibleStoreCount = computed(() =>
+  storeGroups.value.reduce((sum, group) => sum + group.entries.length, 0),
+)
+
+/** 统计卡与 chips 共用：再次点击已选中的分类回到全部 */
+function setLocalFilter(value: LocalFilter): void {
+  state.localFilter = state.localFilter === value && value !== 'all' ? 'all' : value
+}
+
+function setStoreFilter(value: StoreFilter): void {
+  state.storeFilter = state.storeFilter === value && value !== 'all' ? 'all' : value
+}
 
 function isUpdatable(bundle: InstalledBundle): boolean {
   return bundle.updateSpec !== undefined && bundle.latestVersion !== undefined
@@ -589,6 +686,13 @@ export const pluginCenter = {
   storeGroups,
   updateCount,
   detailBundle,
+
+  localBase,
+  localStats,
+  storeStats,
+  visibleStoreCount,
+  setLocalFilter,
+  setStoreFilter,
 }
 
 export type PluginCenterStore = typeof pluginCenter

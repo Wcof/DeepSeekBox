@@ -19,7 +19,7 @@ npm run preview  # 本地预览构建产物
 2. 安装后侧栏出现「插件中心」入口，主面板通过 `iframe` 打开 Host 半边提供的 `/deepseekbox/` 页面。
 3. 页面用的就是 `web/` 里这份 Vue 构建产物，所以改动前端后需要 `npm run build` 并提交 `web/`——git 安装路径不会执行构建。
 
-页面里的数据全部来自宿主：Host 半边在 `/deepseekbox/api/rpc` 上把动作转给 DSH 的 `pluginManager` / `pluginMarket` 服务，所以「本地插件」就是当前 profile 真实的组合包，「插件商场」就是已配置索引源的真实条目，安装、启停、卸载都直接落盘。
+页面里的数据全部来自宿主：Host 半边在 `/deepseekbox/api/rpc` 上把动作转给 DSH 的 `pluginManager` / `pluginMarket` 服务，所以「插件管理」里就是当前 profile 真实的组合包，「插件市场」里就是已配置索引源的真实条目，安装、启停、卸载都直接落盘。
 
 ### 组合包结构
 
@@ -46,7 +46,7 @@ npm run preview  # 本地预览构建产物
 - jsDelivr CDN（main 分支，CDN 缓存可能有延迟）：`https://cdn.jsdelivr.net/gh/Wcof/DeepSeekBox@main/index.json`
 - jsDelivr CDN（按提交固定，永不变化）：`https://cdn.jsdelivr.net/gh/Wcof/DeepSeekBox@<commit-sha>/index.json`
 
-开发环境由 Vite 中间件提供 `http://localhost:5180/index.json`；在插件中心「插件商场」Tab 右上角点击「索引源」也可直接打开当前环境的索引。
+开发环境由 Vite 中间件提供 `http://localhost:5180/index.json`；在插件中心「插件市场」Tab 筛选栏右侧点击「索引源」也可直接打开当前环境的索引。
 
 索引由 `src/data/pluginIndex.ts` 从收录库（`src/data/catalog.ts` 的官方收录库与第三方收录区）生成，收录库更新后运行 `npm run build` 即同步根目录 `index.json` 并自动通过官方校验器（`@deepseek-ai/dsh-plugin-market-index`）验证，无需手工维护。jsDelivr 分支 URL 若长时间未更新，可访问 `https://purge.jsdelivr.net/gh/Wcof/DeepSeekBox@main/index.json` 手动刷新。
 

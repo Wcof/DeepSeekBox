@@ -1,14 +1,19 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
+import type { IconName } from '../icons/iconNames'
 
 const props = withDefaults(
   defineProps<{
     modelValue: string
-    options: { value: string; label: string }[]
+    options: readonly { value: string; label: string }[]
     disabled?: boolean
+    /** 触发器前缀文案，如「排序」 */
+    prefix?: string
+    leadingIcon?: IconName
+    ariaLabel?: string
   }>(),
-  { disabled: false },
+  { disabled: false, prefix: undefined, leadingIcon: undefined, ariaLabel: undefined },
 )
 
 const emit = defineEmits<{ (event: 'update:modelValue', value: string): void }>()
@@ -39,12 +44,17 @@ function select(value: string): void {
       type="button"
       class="filter-select__trigger"
       :disabled="props.disabled"
+      :aria-label="props.ariaLabel"
       aria-haspopup="listbox"
       :aria-expanded="open"
       @click="open = !open"
     >
-      {{ currentLabel }}
-      <span class="filter-select__chevron"><AppIcon name="chevron-down" :size="16" /></span>
+      <span v-if="props.leadingIcon" class="filter-select__icon">
+        <AppIcon :name="props.leadingIcon" :size="16" />
+      </span>
+      <span v-if="props.prefix" class="filter-select__prefix">{{ props.prefix }}</span>
+      <span>{{ currentLabel }}</span>
+      <span class="filter-select__chevron"><AppIcon name="chevron-down" :size="15" /></span>
     </button>
     <ul v-if="open" class="filter-select__menu" role="listbox">
       <li v-for="option in props.options" :key="option.value">

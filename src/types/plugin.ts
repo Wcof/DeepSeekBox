@@ -1,4 +1,36 @@
-export type StoreFilter = 'all' | 'available' | 'installed'
+/** 插件管理 Tab 的来源筛选 */
+export type LocalFilter = 'all' | 'official' | 'third-party' | 'local'
+/** 插件市场 Tab 的筛选 */
+export type StoreFilter = 'all' | 'official' | 'third-party' | 'installed' | 'available'
+export type LocalSortKey = 'status' | 'name' | 'package' | 'origin'
+export type StoreSortKey = 'index' | 'name' | 'author' | 'installable'
+
+/** 组合包来源：宿主的 official 标记优先，其余按安装来源前缀区分本地目录与远程包 */
+export type BundleOrigin = 'official' | 'third-party' | 'local'
+
+const LOCAL_SOURCE_PATTERN = /^(?:link|file|workspace|directory):|^(\.{1,2}\/|\/|~\/|[a-z]:[\\/])/i
+
+export function bundleOrigin(bundle: { official: boolean; source?: string }): BundleOrigin {
+  if (bundle.official) return 'official'
+  return LOCAL_SOURCE_PATTERN.test((bundle.source ?? '').trim()) ? 'local' : 'third-party'
+}
+
+export const BUNDLE_ORIGIN_LABEL: Record<BundleOrigin, string> = {
+  official: '官方插件',
+  'third-party': '第三方插件',
+  local: '本地安装',
+}
+
+export const BUNDLE_ORIGIN_TAG: Record<BundleOrigin, string> = {
+  official: 'tag--green',
+  'third-party': 'tag--blue',
+  local: 'tag--gray',
+}
+
+export const MARKET_LABEL_TEXT: Record<'official' | 'third-party', string> = {
+  official: '官方收录',
+  'third-party': '第三方',
+}
 
 /** 组合包在磁盘上的可读位置：profile 依赖、随安装附带、或已缺失 */
 export type BundleAvailability = 'profile' | 'installation' | 'missing'
