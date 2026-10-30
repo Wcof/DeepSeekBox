@@ -79,11 +79,11 @@
       "versions": [
         {
           "version": "0.3.2",
-          "publishTimestamp": 1793326715,
+          "publishTimestamp": 1793363594,
           "source": {
             "type": "git",
             "url": "https://github.com/Wcof/DeepSeekBox",
-            "commit": "2198e40327824a72871cd952477d8688323497ab"
+            "commit": "4e8d9530003e6dc9a9565b90d71ce0029c6495fb"
           },
           "engines": {}
         }
