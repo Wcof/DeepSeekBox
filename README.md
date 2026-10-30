@@ -13,14 +13,15 @@ npm run preview  # 本地预览构建产物
 
 ## 插件市场索引源
 
-索引文件随仓库一起发布（`npm run build` 后由 postbuild 同步到根目录 `index.json`），格式为 DSH 插件索引 `format: 1`（与 awesome-dsh-plugin 索引同构，双语标题/描述、分类、版本与来源）。在 DeepSeek Harness 的「发现 → Index sources」中添加以下任一 URL 即可浏览本 Box 收录的全部插件：
+索引文件随仓库一起发布（`npm run build` 后由 postbuild 同步到根目录 `index.json` 并用官方校验器验证），格式为 DSH 插件索引 `format: 1`。在 DeepSeek Harness 的「发现 → Index sources」中添加以下任一 URL 即可浏览本 Box 收录的全部插件：
 
-- jsDelivr CDN：`https://cdn.jsdelivr.net/gh/Wcof/DeepSeekBox@main/index.json`
-- GitHub Raw：`https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json`
+- GitHub Raw（始终为最新 main，推荐）：`https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json`
+- jsDelivr CDN（main 分支，CDN 缓存可能有延迟）：`https://cdn.jsdelivr.net/gh/Wcof/DeepSeekBox@main/index.json`
+- jsDelivr CDN（按提交固定，永不变化）：`https://cdn.jsdelivr.net/gh/Wcof/DeepSeekBox@<commit-sha>/index.json`
 
 开发环境由 Vite 中间件提供 `http://localhost:5180/index.json`；在插件中心「插件商场」Tab 右上角点击「索引源」也可直接打开当前环境的索引。
 
-索引由 `src/data/pluginIndex.ts` 从收录库（`src/data/catalog.ts` 的官方收录库与第三方收录区）生成，收录库更新后运行 `npm run build` 即同步根目录 `index.json`，无需手工维护。
+索引由 `src/data/pluginIndex.ts` 从收录库（`src/data/catalog.ts` 的官方收录库与第三方收录区）生成，收录库更新后运行 `npm run build` 即同步根目录 `index.json` 并自动通过官方校验器（`@deepseek-ai/dsh-plugin-market-index`）验证，无需手工维护。jsDelivr 分支 URL 若长时间未更新，可访问 `https://purge.jsdelivr.net/gh/Wcof/DeepSeekBox@main/index.json` 手动刷新。
 
 ## 目录导航
 
