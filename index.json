@@ -58,8 +58,8 @@
         "en": "DeepSeekBox Plugin Center"
       },
       "description": {
-        "en": "The DeepSeek Harness plugin center: browse, download and manage plugins with update checks and per-plugin settings; also published as the DeepSeekBox catalog index and installable as a DSH bundle.",
-        "zh": "DeepSeek Harness 插件中心：浏览、下载与管理插件，检查更新与独立配置；同时作为官方收录索引源发布，本身也可作为 DSH 组合包安装。"
+        "en": "The DeepSeek Harness plugin center: reads and writes the live plugin state (install, enable, remove, index sources); also published as the DeepSeekBox catalog index.",
+        "zh": "DeepSeek Harness 插件中心：直接读写真实插件状态（安装、启停、卸载、索引源），同时作为官方收录索引源发布。"
       },
       "author": "Wcof",
       "icon": "https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/icons/deepseekbox-plugin-center.svg",
@@ -78,12 +78,12 @@
       },
       "versions": [
         {
-          "version": "0.2.0",
-          "publishTimestamp": 1793324746,
+          "version": "0.3.0",
+          "publishTimestamp": 1793325896,
           "source": {
             "type": "git",
             "url": "https://github.com/Wcof/DeepSeekBox",
-            "commit": "90026aa7bed1bfe5f9959b42ae52bf9a0044fc71"
+            "commit": "74f54e46275b6eb6cb5278b61de2fe5ef215ade7"
           },
           "engines": {}
         }
