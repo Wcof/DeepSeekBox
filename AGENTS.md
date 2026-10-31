@@ -61,7 +61,7 @@ DeepSeek Harness 桌面端 APP 的前端工程，当前包含插件中心（安�
 ## 验证入口
 
 - 改动后运行 `npm run build`；涉及 UI 视觉时启动 `npm run dev` 并核对两个 Tab、详情页、通知条、确认弹窗与安装对话框。
-- 涉及收录库或索引时：`npm run build` 后检查 `web/index.json`（10 个插件、format 1），并用 `npm run preview` 确认 `/index.json` 可访问。
+- 涉及收录库或索引时：`npm run build` 后检查 `web/index.json`（10 个插件、format 1），并用 `npm run preview` 确认 `/index.json` 可访问。收录或升版后跑一遍 `npm run check:engines`：它按索引登记的 commit 拉真实 package.json 核对版本与 `engines.dsh`，并列出上游已有更新版本的插件；不一致时退出码为 1。
 - 涉及组合包时：`npm run validate:bundle` 必须通过；再按 Host 路由自查项验证 `/deepseekbox/` 入口页 200、静态资源 200、`/deepseekbox` 308 补斜杠、路径穿越不返回 200、缺 `web/` 时 503 带修复提示。
 - 涉及 API 时：用假 ctx 起本地 HTTP 覆盖 `listBundles` / `setBundleEnabled` / `installBundle` / `searchMarket` 的透传、跨站与异源拒绝、未知方法 400、非 POST 405；真实链路只能在 DSH 内验证（`ctx.get('pluginManager')` 存在与否）。
 - 操作路径清单：检查更新 → 一键更新 / 单个更新、启用 / 停用组合包、卸载二次确认、商场安装与更新、按包名 / git / 本地目录安装、详情页逐行启停。

@@ -34,6 +34,7 @@
     "postbuild": "cp web/index.json index.json && node scripts/sync-self-entry.mjs && node scripts/validate-index.mjs && node scripts/validate-bundle.mjs",
     "validate:index": "node scripts/validate-index.mjs",
     "validate:bundle": "node scripts/validate-bundle.mjs",
+    "check:engines": "node scripts/check-engines.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
