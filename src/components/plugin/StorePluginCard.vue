@@ -93,13 +93,14 @@ const branchStatus = ref<'idle' | 'loading' | 'ready' | 'error'>('idle')
 const branches = ref<RepoBranch[]>([])
 const branchError = ref('')
 
-/** 已装来源里带 #分支名 就认为装的是这个分支 */
-const installedSource = computed(
-  () => state.bundles.find((bundle) => bundle.name === props.entry.name)?.source ?? '',
-)
+/** 已装来源里的 ref（# 之后那段）：精确比对分支名，避免 main 命中 main-2 */
+const installedRef = computed(() => {
+  const source = state.bundles.find((bundle) => bundle.name === props.entry.name)?.source ?? ''
+  const at = source.lastIndexOf('#')
+  return at === -1 ? '' : source.slice(at + 1)
+})
 
-const isInstalled = (branch: RepoBranch): boolean =>
-  installedSource.value.includes(`#${branch.name}`)
+const isInstalled = (branch: RepoBranch): boolean => installedRef.value === branch.name
 
 const busyOf = (branch: RepoBranch): boolean =>
   state.busy[`branch-install:${repo.value}#${branch.name}`] === true

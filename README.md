@@ -1,6 +1,8 @@
 # DeepSeekBox
 
-DeepSeek Harness 桌面端 APP 的插件中心，本身是一个可安装的 DSH 插件组合包（bundle），同时作为 DSH 插件市场索引源：收录库中的插件（官方收录 + 经核实的社区插件）会生成标准索引文件，供 DeepSeek Harness「发现」页订阅浏览。
+DeepSeek Harness 桌面端 APP 的插件中心，本身是一个可安装的 DSH 插件组合包（bundle），同时作为 DSH 插件市场索引源：收录库中的插件（本 Box 收录 + 经核实的社区插件）会生成标准索引文件，供 DeepSeek Harness「发现」页订阅浏览。这里的「收录」指本 Box 的整理，不代表 DSH 官方收录；只有索引 `metadata.labels` 里带 `official` 的条目才算官方。
+
+上游把修复合在分支上却迟迟不发版时，卡片左下角的版本号可以点开，直接选分支安装（装的是该分支当前的头提交）。
 
 ## 快速开始
 
