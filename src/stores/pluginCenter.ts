@@ -13,9 +13,10 @@ import type {
   Toast,
   ToastType,
 } from '../types/plugin'
-import { bundleOrigin } from '../types/plugin'
+import { bundleOrigin, MARKET_CATEGORY_LABEL } from '../types/plugin'
 import * as service from '../services/pluginService'
 import { DEV_GUIDE_URL } from '../data/catalog'
+import { isPinnedIndex } from '../data/pinnedIndex'
 
 export type TabKey = 'local' | 'store'
 type ListStatus = 'loading' | 'ready' | 'error'
@@ -54,6 +55,12 @@ const state = reactive({
   hostOnline: null as boolean | null,
   localStatus: 'loading' as ListStatus,
   storeStatus: 'loading' as ListStatus,
+  /** 每次市场加载自增的请求令牌：晚到的响应比对不上就丢弃，避免覆盖新结果 */
+  storeRequest: 0,
+  /** 翻页进度，形如 "12/54"；已有列表时用它替代骨架屏 */
+  storeProgress: '',
+  /** 全库条数（上一次无关键词加载的结果）：搜索 0 结果时用它说明「已搜索全部 N 条」 */
+  storeCorpusTotal: 0,
 
   localQuery: '',
   storeQuery: '',
@@ -181,11 +188,14 @@ function withoutUpdate(bundle: InstalledBundle): InstalledBundle {
  * 默认版本与当前 DSH 不兼容时不打标记：宿主的安装前检查会拒掉它，提示「可更新」只会让人白点一次。
  */
 function applyUpdateFlags(): number {
+  // 搜索结果是子集：不在结果里的组合包保持原标记，别因为「没搜到」就抹掉可更新提示
+  const complete = state.storeQuery.trim().length <= 1
   const byName = new Map(state.market.map((entry) => [entry.name, entry]))
   let count = 0
   state.bundles = state.bundles.map((bundle) => {
     const entry = byName.get(bundle.name)
-    if (entry?.installation.status !== 'update-available' || !entry.defaultVersion) {
+    if (entry === undefined) return complete ? withoutUpdate(bundle) : bundle
+    if (entry.installation.status !== 'update-available' || !entry.defaultVersion) {
       return withoutUpdate(bundle)
     }
     const target = entry.versions.find((version) => version.version === entry.defaultVersion)
@@ -208,10 +218,37 @@ const MARKET_PAGE_SIZE = 100
 const MARKET_MAX_PAGES = 60
 /** 首页之后的翻页并发数：串行 55 页要等十几秒 */
 const MARKET_PAGE_CONCURRENCY = 6
+/** 搜索只取第 1 页：几千条里翻 60 页只为凑满一屏没有意义 */
+const SEARCH_PAGE_SIZE = 100
+/** 首页不足以覆盖全部命中时，延迟一次完整翻页把结果补齐 */
+const SEARCH_DEEP_DELAY = 600
+
+let searchTimer: ReturnType<typeof setTimeout> | undefined
+let deepSearchTimer: ReturnType<typeof setTimeout> | undefined
+
+/**
+ * 上一次「无关键词」加载的结果：清空搜索时直接换回来，
+ * 不必再为「把列表还给我」多发一轮请求。
+ */
+let fullMarket: MarketEntry[] = []
+let fullIndexTotals: Record<string, number> = {}
+
+/** 有没有一轮加载正在跑：作废它之后才知道要不要补发（见 cancelStoreSearch） */
+let storeLoadInFlight = false
+
+function isCurrent(token: number): boolean {
+  return token === state.storeRequest
+}
+
+/** 只有本次请求仍是当前请求时才写进度，被取代的翻页不再刷界面 */
+function reportProgress(token: number, done: number, total: number): void {
+  if (isCurrent(token)) state.storeProgress = `${done}/${total}`
+}
 
 async function fetchIndexPages(
   url: string,
   refresh: boolean,
+  token: number,
 ): Promise<{ entries: MarketEntry[]; total: number }> {
   const query = { text: state.storeQuery, limit: MARKET_PAGE_SIZE }
   const first = await service.searchIndex(url, { ...query, offset: 0, refresh })
@@ -226,10 +263,16 @@ async function fetchIndexPages(
     ? Math.min(Math.ceil((total - nextOffset) / MARKET_PAGE_SIZE), MARKET_MAX_PAGES - 1)
     : 0
 
+  const totalPages = 1 + remaining
+  reportProgress(token, 1, totalPages)
+
   if (remaining > 0) {
     let cursor = 0
+    let done = 1
     const fetchPage = async (): Promise<void> => {
       while (cursor < remaining) {
+        // 请求已被新的输入/刷新取代时就停手，别把剩下的页也拉下来
+        if (!isCurrent(token)) return
         const page = cursor++
         const result = await service.searchIndex(url, {
           ...query,
@@ -238,6 +281,8 @@ async function fetchIndexPages(
           fetchedAt,
         })
         pages[page + 1] = result.entries
+        done += 1
+        reportProgress(token, done, totalPages)
       }
     }
     await Promise.all(
@@ -246,6 +291,18 @@ async function fetchIndexPages(
   }
 
   return { entries: pages.flatMap((page) => page ?? []), total }
+}
+
+/** 不带关键词的加载才算「完整列表」，清空搜索时用它还原 */
+function rememberFullMarket(): void {
+  if (state.storeQuery.trim().length > 1) return
+  fullMarket = state.market
+  fullIndexTotals = { ...state.indexTotals }
+  // 搜索返回的 total 是命中数，全库基数只能从这次无关键词的加载里记
+  state.storeCorpusTotal = Math.max(
+    Object.values(fullIndexTotals).reduce((sum, n) => sum + n, 0),
+    fullMarket.length,
+  )
 }
 
 async function loadLocal(): Promise<void> {
@@ -264,12 +321,21 @@ async function loadLocal(): Promise<void> {
 }
 
 async function loadStore(refresh = false): Promise<void> {
+  // 完整加载接管之后，之前排队的「补齐搜索结果」就不必跑了
+  if (deepSearchTimer) {
+    clearTimeout(deepSearchTimer)
+    deepSearchTimer = undefined
+  }
+  const token = ++state.storeRequest
+  storeLoadInFlight = true
   resetStoreRenderLimit()
   state.storeStatus = 'loading'
   state.indexErrors = {}
   state.indexTotals = {}
+  state.storeProgress = ''
   try {
     const indexes = await service.listIndexes()
+    if (!isCurrent(token)) return
     state.indexes = indexes
     if (indexes.length === 0) {
       state.market = []
@@ -285,19 +351,29 @@ async function loadStore(refresh = false): Promise<void> {
         continue
       }
       try {
-        const { entries, total } = await fetchIndexPages(index.url, refresh)
+        const { entries, total } = await fetchIndexPages(index.url, refresh, token)
+        if (!isCurrent(token)) return
         collected.push(...entries)
         state.indexTotals[index.url] = total
       } catch (error) {
+        if (!isCurrent(token)) return
         state.indexErrors[index.url] = describe(error)
       }
     }
+    if (!isCurrent(token)) return
     state.market = collected
+    rememberFullMarket()
     state.storeStatus = 'ready'
+    state.storeProgress = ''
     applyUpdateFlags()
   } catch (error) {
+    if (!isCurrent(token)) return
     state.storeStatus = 'error'
+    state.storeProgress = ''
     console.warn('[deepseekbox] listIndexes failed:', describe(error))
+  } finally {
+    // 只有仍是当前时才交还「在途」标记：已经作废的这次不该替后来者清账
+    if (isCurrent(token)) storeLoadInFlight = false
   }
 }
 
@@ -311,15 +387,141 @@ function dismissUpdateNotice(): void {
   state.updateNoticeDismissed = true
 }
 
-let searchTimer: ReturnType<typeof setTimeout> | undefined
+/** 只掐掉排队中的定时器，不动在途请求（切 tab 用这个，别把还在跑的加载作废） */
+function clearStoreSearchTimers(): void {
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+    searchTimer = undefined
+  }
+  if (deepSearchTimer) {
+    clearTimeout(deepSearchTimer)
+    deepSearchTimer = undefined
+  }
+}
 
-/** 商场搜索走后端索引匹配，输入停顿后再请求 */
+/**
+ * 取消排队中的搜索，并让在途请求作废（新输入或完整加载会接管之后的状态）。
+ *
+ * 返回 true 表示「被作废的是一轮还在跑的加载，已替它补发一轮」——调用方据此决定
+ * 要不要再自己调 loadStore，避免同一件事发两次请求。
+ *
+ * 为什么必须补发：作废掉的那次加载在每个 await 之后都会发现自己已过期并直接 return，
+ * 再也不会回头把 storeStatus 写成 ready；没有替补的话列表就永远停在骨架屏上，
+ * 用户只能手动点刷新。首次加载 5,413 条要翻 55 页，几秒的窗口很容易撞上。
+ */
+function cancelStoreSearch(): boolean {
+  clearStoreSearchTimers()
+  const wasLoading = storeLoadInFlight
+  state.storeRequest += 1
+  if (!wasLoading) return false
+  void loadStore()
+  return true
+}
+
+/** 商场搜索走后端索引匹配，输入停顿后再请求；真正取数交给 loadStoreSearch */
 function scheduleStoreSearch(): void {
   if (searchTimer) clearTimeout(searchTimer)
   searchTimer = setTimeout(() => {
     searchTimer = undefined
-    void loadStore()
+    void loadStoreSearch()
   }, 260)
+}
+
+/** 把列表换回上一次完整加载的结果；没有快照（首次加载中）就交给完整加载 */
+function restoreFullMarket(): void {
+  resetStoreRenderLimit()
+  state.storeProgress = ''
+  if (fullMarket.length > 0) {
+    state.market = fullMarket
+    state.indexTotals = fullIndexTotals
+    state.storeStatus = 'ready'
+    return
+  }
+  if (state.storeStatus === 'loading') return
+  void loadStore()
+}
+
+/**
+ * 搜索只取第 1 页：几千条索引里翻满 60 页只为凑一屏没有意义。
+ * 拿到 total 立刻更新列表；命中多于一页时再延迟补齐完整翻页。
+ * 每次请求带自己的令牌，晚到的响应比对不上就丢弃——连续输入不会互相覆盖。
+ */
+async function loadStoreSearch(): Promise<void> {
+  if (deepSearchTimer) {
+    clearTimeout(deepSearchTimer)
+    deepSearchTimer = undefined
+  }
+  const text = state.storeQuery.trim()
+  if (text.length <= 1) {
+    // 一两个字不搜：把搜索结果换回完整列表，列表才不会和输入框对不上
+    restoreFullMarket()
+    return
+  }
+
+  const token = ++state.storeRequest
+  storeLoadInFlight = true
+  state.storeStatus = 'loading'
+  state.indexErrors = {}
+  state.indexTotals = {}
+  state.storeProgress = ''
+  let deeper = false
+  try {
+    const indexes = await service.listIndexes()
+    if (!isCurrent(token)) return
+    state.indexes = indexes
+    if (indexes.length === 0) {
+      state.market = []
+      state.storeStatus = 'ready'
+      return
+    }
+
+    const collected: MarketEntry[] = []
+    for (const index of indexes) {
+      if (index.error) {
+        state.indexErrors[index.url] = index.error
+        continue
+      }
+      try {
+        const page = await service.searchIndex(index.url, {
+          text,
+          limit: SEARCH_PAGE_SIZE,
+          offset: 0,
+        })
+        if (!isCurrent(token)) return
+        collected.push(...page.entries)
+        state.indexTotals[index.url] = page.total
+        // 命中超过一页：稍后用完整翻页补齐，先让用户看到第一屏
+        if (page.total > page.entries.length) deeper = true
+      } catch (error) {
+        if (!isCurrent(token)) return
+        state.indexErrors[index.url] = describe(error)
+      }
+    }
+    if (!isCurrent(token)) return
+    state.market = collected
+    state.storeStatus = 'ready'
+    applyUpdateFlags()
+    if (deeper) {
+      deepSearchTimer = setTimeout(() => {
+        deepSearchTimer = undefined
+        void loadStore()
+      }, SEARCH_DEEP_DELAY)
+    }
+  } catch (error) {
+    if (!isCurrent(token)) return
+    state.storeStatus = 'error'
+    console.warn('[deepseekbox] searchMarket failed:', describe(error))
+  } finally {
+    if (isCurrent(token)) storeLoadInFlight = false
+  }
+}
+
+/** 清空搜索框（保留其他筛选）：先从快照换回完整列表，不再发请求 */
+function clearStoreQuery(): void {
+  // 先清关键词：替被作废的加载补发的那一轮要用新状态，否则又把结果搜回来了
+  state.storeQuery = ''
+  cancelStoreSearch()
+  restoreFullMarket()
 }
 
 /** 订阅本 Box 的索引源（已有则忽略） */
@@ -688,6 +890,81 @@ const storeStats = computed(() => {
   return counts
 })
 
+
+const STORE_FILTER_TEXT: Record<StoreFilter, string> = {
+  all: '全部',
+  official: 'DSH 官方',
+  catalog: 'DeepSeekBox 收录',
+  'third-party': '第三方来源',
+  installed: '已安装',
+  available: '可安装',
+}
+
+/** 这三种是「来源」筛选：它们为 0 属于异常，其余为 0（比如还没装任何插件）是常态 */
+const SOURCE_FILTERS: ReadonlySet<StoreFilter> = new Set<StoreFilter>([
+  'official',
+  'catalog',
+  'third-party',
+])
+
+type StoreConditionKind = 'query' | 'filter' | 'authors' | 'categories'
+
+interface StoreCondition {
+  kind: StoreConditionKind
+  text: string
+  /** 来源一档空了但索引里还有别的插件：多半是提供它的索引源被移除，要显眼地自证 */
+  warn?: boolean
+}
+
+/**
+ * 生效中的筛选条件摘要：由 state 直接算出，不依赖分面 chip 是否还在。
+ * chip 会随分面重算而消失（作者被筛掉后就不在列表里了），条件本身不能跟着消失，
+ * 否则列表空得没来由，用户连「取消哪一项」都找不到入口。
+ */
+const storeConditions = computed<StoreCondition[]>(() => {
+  const conditions: StoreCondition[] = []
+  const keyword = state.storeQuery.trim()
+  if (keyword) conditions.push({ kind: 'query', text: `关键词 "${keyword}"` })
+  if (state.storeFilter !== 'all') {
+    const label = STORE_FILTER_TEXT[state.storeFilter]
+    const count = storeStats.value[state.storeFilter]
+    // 「已安装 0 条」是正常的，不该报警；来源那一档独独空了才是异常
+    const orphaned = count === 0 && SOURCE_FILTERS.has(state.storeFilter) && state.market.length > 0
+    conditions.push({
+      kind: 'filter',
+      text: orphaned ? `来源 ${label}（0 条，提供它的索引源可能已移除）` : `来源 ${label}`,
+      warn: orphaned,
+    })
+  }
+  if (state.storeAuthors.length === 1) {
+    conditions.push({ kind: 'authors', text: `创作者 ${state.storeAuthors[0]}` })
+  } else if (state.storeAuthors.length > 1) {
+    conditions.push({ kind: 'authors', text: `创作者 ${state.storeAuthors.length} 位` })
+  }
+  if (state.storeCategories.length > 0) {
+    const labels = state.storeCategories.map((key) => MARKET_CATEGORY_LABEL[key] ?? key)
+    conditions.push({ kind: 'categories', text: `分类 ${labels.join('/')}` })
+  }
+  return conditions
+})
+
+/** 摘掉某一个条件，其余筛选保留 */
+function clearStoreCondition(kind: StoreConditionKind): void {
+  switch (kind) {
+    case 'query':
+      clearStoreQuery()
+      return
+    case 'filter':
+      state.storeFilter = 'all'
+      return
+    case 'authors':
+      state.storeAuthors = []
+      return
+    default:
+      state.storeCategories = []
+  }
+}
+
 function matchesLocalQuery(bundle: InstalledBundle, q: string): boolean {
   if (!q) return true
   return [bundle.title, bundle.name, bundle.description]
@@ -726,9 +1003,16 @@ function matchesStoreFilter(entry: MarketEntry): boolean {
   }
 }
 
+/** 索引声明的总条数（各索引源的 total 之和） */
+const indexDeclaredTotal = computed(() =>
+  Object.values(state.indexTotals).reduce((sum, n) => sum + n, 0),
+)
+
 /** 索引声明的总条数与已加载条数不一致时（翻页上限），如实告诉用户列表不全 */
 const storeTruncated = computed(() => {
-  const declared = Object.values(state.indexTotals).reduce((sum, n) => sum + n, 0)
+  // 加载中对比的是上一轮的数字，换个筛选还会闪一下，只在稳定态提示
+  if (state.storeStatus !== 'ready') return 0
+  const declared = indexDeclaredTotal.value
   return declared > state.market.length ? declared : 0
 })
 
@@ -834,7 +1118,16 @@ const storeGroups = computed(() => {
       INSTALL_RANK[a.installation.status] - INSTALL_RANK[b.installation.status] || byTitle(a, b),
   }
   const sorter = sorters[state.storeSort]
-  const result = [...groups.values()].sort((a, b) => b.entries.length - a.entries.length)
+  // 分组顺序跟随订阅顺序（listIndexes 返回的顺序），精选索引提到最前：
+  // 社区目录有 5,413 条，按条数降序会把它挤到用户看不见的位置
+  const order = new Map(state.indexes.map((index, position) => [index.url, position]))
+  const result = [...groups.values()].sort((a, b) => {
+    const featured = Number(isPinnedIndex(b.url)) - Number(isPinnedIndex(a.url))
+    if (featured !== 0) return featured
+    return (
+      (order.get(a.url) ?? Number.MAX_SAFE_INTEGER) - (order.get(b.url) ?? Number.MAX_SAFE_INTEGER)
+    )
+  })
   if (sorter) for (const group of result) group.entries.sort(sorter)
   return result
 })
@@ -847,14 +1140,22 @@ const visibleStoreCount = computed(() =>
 const renderedStoreGroups = computed(() => {
   let budget = state.storeRenderLimit
   const groups: Array<{ title: string; url: string; entries: MarketEntry[]; total: number }> = []
-  for (const group of storeGroups.value) {
-    if (budget <= 0) break
-    const entries = group.entries.slice(0, budget)
+  for (const [position, group] of storeGroups.value.entries()) {
+    if (groups.length > 0 && budget <= 0) break
+    // 预算先给第一个分组足额（精选组完整渲染），剩下的按顺序分给后续分组
+    const full = position === 0 && isPinnedIndex(group.url)
+    const entries = full ? group.entries : group.entries.slice(0, Math.max(budget, 0))
+    if (entries.length === 0) break
     budget -= entries.length
     groups.push({ ...group, entries, total: group.entries.length })
   }
   return groups
 })
+
+/** 条目多到一定程度后换用更密的卡片网格：1216 宽下两列 599px 的卡太浪费 */
+const STORE_DENSE_THRESHOLD = 500
+
+const denseStoreCards = computed(() => visibleStoreCount.value > STORE_DENSE_THRESHOLD)
 
 const storeHasMore = computed(() => visibleStoreCount.value > state.storeRenderLimit)
 
@@ -893,6 +1194,9 @@ const installedVersionOf = (name: string): string | undefined =>
   state.bundles.find((bundle) => bundle.name === name)?.version
 
 function switchTab(tab: TabKey): void {
+  // 离开市场页时只掐定时器：用户已经不看这个 tab 了，没必要再发一轮搜索；
+  // 但也不能把在途的加载作废——那会让列表在他回来时停在「还没加载完」
+  if (state.activeTab === 'store' && tab !== 'store') clearStoreSearchTimers()
   state.activeTab = tab
 }
 
@@ -902,7 +1206,8 @@ function gotoStore(): void {
   state.storeAuthors = []
   state.storeCategories = []
   state.activeTab = 'store'
-  void loadStore()
+  // 已经在加载中就别再发一轮：bumped token 之后补发的那轮用的已经是清干净的筛选
+  if (!cancelStoreSearch()) void loadStore()
 }
 
 function openDevGuide(): void {
@@ -927,6 +1232,10 @@ export const pluginCenter = {
   loadLocal,
   loadStore,
   scheduleStoreSearch,
+  loadStoreSearch,
+  cancelStoreSearch,
+  clearStoreQuery,
+  clearStoreCondition,
   subscribeSelfIndex,
   subscribeCommunityIndex,
 
@@ -968,6 +1277,8 @@ export const pluginCenter = {
   localBase,
   localStats,
   storeStats,
+  storeConditions,
+  indexDeclaredTotal,
   storeTruncated,
   authorFacets,
   authorFacetsHidden,
@@ -978,6 +1289,7 @@ export const pluginCenter = {
   categoryFacets,
   setStoreCategory,
   visibleStoreCount,
+  denseStoreCards,
   setLocalFilter,
   setStoreFilter,
 }

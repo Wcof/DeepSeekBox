@@ -19,7 +19,9 @@
   --color-danger-border: #fecaca;
 
   --green-bg: #ecfdf5;
+  /* 圆点等图形用 --green-text；12.5px 的文字对比度不足，正文用加深一档的 strong */
   --green-text: #059669;
+  --green-text-strong: #047857;
   --green-border: #a7f3d0;
   --amber-bg: #fffbeb;
   --amber-text: #b45309;
@@ -170,7 +172,7 @@ button {
 
 .tag--green {
   background: var(--green-bg);
-  color: var(--green-text);
+  color: var(--green-text-strong);
 }
 
 .tag--amber {
@@ -217,7 +219,7 @@ button {
 }
 
 .status--running {
-  color: var(--green-text);
+  color: var(--green-text-strong);
   border-color: var(--green-border);
   background: var(--green-bg);
 }
@@ -463,6 +465,14 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+/* 只渲染了前若干条时如实标注，别让分组头看起来像「一共就这么点」 */
+.store-group__rendered {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .store-group__rule {
   flex: 1;
   height: 1px;
@@ -566,6 +576,11 @@ button {
   background: var(--color-surface-hover);
 }
 
+.search__clear:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
 .chips {
   display: flex;
   align-items: center;
@@ -651,24 +666,41 @@ button {
   color: var(--color-text-secondary);
 }
 
-/* 创作者分面：跟随来源筛选，独占一行 */
+/* 创作者 / 分类分面：跟随来源筛选，独占一行且不换行——
+   展开更多作者时筛选条高度不变，横向滚动取用 */
 .facets {
   flex-basis: 100%;
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* 留出焦点环的位置，overflow 会裁掉子元素的 box-shadow */
+  padding: 4px 2px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.facets::-webkit-scrollbar {
+  display: none;
+}
+
+.facets > * {
+  flex: none;
 }
 
 .facets__label {
   font-size: 12.5px;
   font-weight: 600;
   color: var(--color-text-secondary);
+  white-space: nowrap;
 }
 
 .facets__hint {
   font-size: 12px;
   color: var(--color-text-muted);
+  white-space: nowrap;
 }
 
 .filters__tail {
@@ -704,6 +736,120 @@ button {
   opacity: 0.45;
   cursor: default;
   pointer-events: none;
+}
+
+.filters__icon-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+/* 生效中的筛选摘要：一行说清「现在被什么筛着、还剩几条、怎么一键放开」 */
+.filter-sum {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 2px;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+}
+
+.filter-sum__label {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.filter-sum__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 3px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--color-text-body);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.filter-sum__item:hover {
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+.filter-sum__item:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+/* 来源一档被筛到 0 条：多半是索引源没了，用琥珀色把它从普通条件里挑出来 */
+.filter-sum__item--warn {
+  border-color: #fcd34d;
+  background: var(--amber-bg);
+  color: var(--amber-text);
+}
+
+.filter-sum__item--warn:hover {
+  border-color: #f59e0b;
+  background: #fef3c7;
+  color: var(--amber-text);
+}
+
+.filter-sum__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-sum__arrow {
+  color: var(--color-text-muted);
+}
+
+.filter-sum__count {
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.filter-sum__clear {
+  padding: 3px 8px;
+  border: 1px dashed var(--color-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filter-sum__clear:hover {
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+}
+
+.filter-sum__clear:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+/* 非首次加载：一行细进度替代骨架屏，列表高度与滚动位置都保持不动 */
+.store-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+}
+
+.store-list {
+  min-height: 120px;
 }
 
 /* ============ 筛选 / 排序下拉 ============ */
@@ -977,6 +1123,74 @@ button {
   grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
   gap: 18px;
   align-items: stretch;
+}
+
+/* 条目过千时换用更密的网格：400px 起跳在 1216 宽下只出两列，一屏看不了几条 */
+.card-grid--dense {
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+}
+
+/* 密度更高的市场卡片：同样信息量，占用高度更小 */
+.plugin-card--dense {
+  padding: 16px 18px;
+  border-radius: 14px;
+}
+
+.plugin-card--dense:hover {
+  /* 密集网格里整块位移会让相邻卡片跟着抖，去掉位移只留阴影 */
+  transform: none;
+}
+
+.plugin-card--dense .plugin-card__tile {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+}
+
+.plugin-card--dense .plugin-card__header {
+  gap: 11px;
+}
+
+.plugin-card--dense .plugin-card__name {
+  font-size: 15px;
+}
+
+.plugin-card--dense .plugin-card__id {
+  margin-top: 3px;
+  font-size: 12px;
+}
+
+.plugin-card--dense .plugin-card__desc {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.55;
+  -webkit-line-clamp: 2;
+}
+
+.plugin-card--dense .plugin-card__facts {
+  margin-top: 9px;
+  gap: 6px;
+}
+
+/* 仓库地址在密集网格里几乎不可读，留给详情页 */
+.plugin-card--dense .plugin-card__fact--repo {
+  display: none;
+}
+
+.plugin-card--dense .plugin-card__divider {
+  padding-top: 12px;
+}
+
+.plugin-card--dense .plugin-card__divider::before {
+  margin-bottom: 11px;
+}
+
+/* 密集网格里整屏都是彩色描边，状态退回「圆点 + 文字」的裸形态 */
+.plugin-card--dense .status {
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
 }
 
 .skeleton-card {

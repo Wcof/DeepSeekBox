@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { pluginCenter } from '../../stores/pluginCenter'
 import { MARKET_CATEGORY_LABEL } from '../../types/plugin'
-import type { LocalFilter, StoreFilter } from '../../types/plugin'
+import type { LocalFilter } from '../../types/plugin'
 import AppIcon from '../icons/AppIcon.vue'
 import LocalPluginCard from './LocalPluginCard.vue'
 import StorePluginCard from './StorePluginCard.vue'
@@ -13,6 +13,7 @@ const {
   localBase,
   localStats,
   storeStats,
+  storeConditions,
   storeTruncated,
   authorFacets,
   authorFacetsHidden,
@@ -23,6 +24,7 @@ const {
   categoryFacets,
   setStoreCategory,
   visibleStoreCount,
+  denseStoreCards,
   filteredLocal,
   renderedStoreGroups,
   storeHasMore,
@@ -37,6 +39,9 @@ const {
   loadLocal,
   loadStore,
   scheduleStoreSearch,
+  cancelStoreSearch,
+  clearStoreQuery,
+  clearStoreCondition,
   subscribeSelfIndex,
   subscribeCommunityIndex,
   gotoStore,
@@ -53,11 +58,12 @@ const LOCAL_CARDS = [
 ] as const
 
 const STORE_CARDS = [
-  { key: 'all', label: '全部收录', chip: '全部', icon: 'box', tint: '' },
-  { key: 'official', label: 'DSH 官方', chip: 'DSH 官方', icon: 'shield-check', tint: 'green' },
-  { key: 'catalog', label: 'DeepSeekBox 收录', chip: '收录', icon: 'inbox', tint: 'blue' },
-  { key: 'third-party', label: '第三方来源', chip: '第三方', icon: 'users', tint: 'violet' },
-  { key: 'installed', label: '已安装', chip: '已安装', icon: 'circle-check', tint: 'amber' },
+  { key: 'all', label: '全部收录', icon: 'box', tint: '' },
+  { key: 'official', label: 'DSH 官方', icon: 'shield-check', tint: 'green' },
+  { key: 'catalog', label: 'DeepSeekBox 收录', icon: 'inbox', tint: 'blue' },
+  { key: 'third-party', label: '第三方来源', icon: 'users', tint: 'violet' },
+  { key: 'installed', label: '已安装', icon: 'circle-check', tint: 'amber' },
+  { key: 'available', label: '可安装', icon: 'download', tint: 'blue' },
 ] as const
 
 const LOCAL_CHIPS: ReadonlyArray<{ key: LocalFilter; label: string }> = LOCAL_CARDS.map(
@@ -65,19 +71,15 @@ const LOCAL_CHIPS: ReadonlyArray<{ key: LocalFilter; label: string }> = LOCAL_CA
 )
 
 /**
- * 市场侧的统计卡与 chips 按数据出现：只有真的存在某个来源时才显示那一档，
+ * 市场侧的统计卡按数据出现：只有真的存在某个来源时才显示那一档，
  * 避免订阅了社区目录后还摆着「DSH 官方 0 / 第三方 0」两张空卡。
+ * 市场侧不再另起一行 chips——统计卡就是唯一的来源筛选入口。
  */
 const storeCards = computed(() =>
   STORE_CARDS.filter(
     (card) => card.key === 'all' || card.key === 'installed' || storeStats.value[card.key] > 0,
   ),
 )
-
-const storeChips = computed<ReadonlyArray<{ key: StoreFilter; label: string }>>(() => [
-  ...storeCards.value.map(({ key, chip }) => ({ key, label: chip })),
-  { key: 'available', label: '可安装' },
-])
 
 const LOCAL_SORTS = [
   { value: 'status', label: '状态优先' },
@@ -118,8 +120,24 @@ const nothingInstalled = () => localIdle() && localBase.value.length === 0
 const noLocalMatch = () =>
   localIdle() && localBase.value.length > 0 && filteredLocal.value.length === 0
 
+/** 市场里一条都不匹配（筛选/分类把结果筛空）：列表区要自证，不能留白 */
 const noStoreMatch = () =>
   state.storeStatus === 'ready' && state.market.length > 0 && visibleStoreCount.value === 0
+
+/** 搜索把索引搜空了：索引有内容、结果 0 条，和「索引里没有插件」不是一回事 */
+const storeSearchEmpty = () =>
+  state.storeStatus === 'ready' &&
+  state.indexes.length > 0 &&
+  state.market.length === 0 &&
+  state.storeQuery.trim().length > 0
+
+/** 索引本身没有任何条目（连关键词都没有时） */
+const storeIndexEmpty = () =>
+  state.storeStatus === 'ready' &&
+  state.market.length === 0 &&
+  state.storeQuery.trim().length === 0
+
+const indexErrorList = () => Object.entries(state.indexErrors)
 
 function clearLocalFilters(): void {
   state.localQuery = ''
@@ -127,14 +145,13 @@ function clearLocalFilters(): void {
 }
 
 function clearStoreFilters(): void {
+  // 先把条件清干净：被作废的加载若还要补发，补发的那轮就该用清干净的状态
   state.storeQuery = ''
   state.storeFilter = 'all'
   state.storeAuthors = []
   state.storeCategories = []
-  void loadStore()
+  if (!cancelStoreSearch()) void loadStore()
 }
-
-const indexErrorList = () => Object.entries(state.indexErrors)
 
 function hostOf(url: string): string {
   try {
@@ -289,6 +306,7 @@ function hostOf(url: string): string {
             type="button"
             class="chip"
             :class="{ 'chip--active': state.localFilter === chip.key }"
+            :aria-pressed="state.localFilter === chip.key"
             @click="setLocalFilter(chip.key)"
           >
             {{ chip.label }}
@@ -362,7 +380,7 @@ function hostOf(url: string): string {
 
     <!-- 插件市场 -->
     <template v-else>
-      <section v-if="state.storeStatus === 'ready'" class="stats" aria-label="收录来源统计">
+      <section v-if="state.market.length > 0" class="stats" aria-label="收录来源统计">
         <button
           v-for="card in storeCards"
           :key="card.key"
@@ -398,32 +416,24 @@ function hostOf(url: string): string {
             type="button"
             class="search__clear"
             aria-label="清空搜索"
-            @click="state.storeQuery = ''; loadStore()"
+            @click="clearStoreQuery()"
           >
             <AppIcon name="x" :size="15" />
           </button>
         </div>
 
-        <div class="chips" role="group" aria-label="按来源筛选">
-          <button
-            v-for="chip in storeChips"
-            :key="chip.key"
-            type="button"
-            class="chip"
-            :class="{ 'chip--active': state.storeFilter === chip.key }"
-            @click="setStoreFilter(chip.key)"
-          >
-            {{ chip.label }}
-            <span class="chip__count">{{ storeStats[chip.key] }}</span>
-          </button>
-        </div>
-
-        <div v-if="authorFacets.length > 1" class="facets">
-          <span class="facets__label">创作者</span>
+        <div
+          v-if="authorFacets.length > 1"
+          class="facets"
+          role="group"
+          aria-label="按创作者筛选（在所选来源内）"
+        >
+          <span class="facets__label">创作者（在所选来源内）</span>
           <button
             type="button"
             class="chip"
             :class="{ 'chip--active': state.storeAuthors.length === 0 }"
+            :aria-pressed="state.storeAuthors.length === 0"
             @click="state.storeAuthors = []"
           >
             全部
@@ -464,12 +474,18 @@ function hostOf(url: string): string {
           <span v-else-if="state.storeAuthors.length > 1" class="facets__hint">多选取任一命中</span>
         </div>
 
-        <div v-if="categoryFacets.length > 1" class="facets">
-          <span class="facets__label">分类</span>
+        <div
+          v-if="categoryFacets.length > 1"
+          class="facets"
+          role="group"
+          aria-label="按分类筛选（在所选来源与创作者内）"
+        >
+          <span class="facets__label">分类（在所选来源与创作者内）</span>
           <button
             type="button"
             class="chip"
             :class="{ 'chip--active': state.storeCategories.length === 0 }"
+            :aria-pressed="state.storeCategories.length === 0"
             @click="state.storeCategories = []"
           >
             全部
@@ -524,9 +540,48 @@ function hostOf(url: string): string {
             刷新
           </button>
         </div>
+
+        <!-- 生效中的筛选摘要：条件由 state 算出，chip 不在了也要能自证 -->
+        <div
+          v-if="storeConditions.length"
+          class="filter-sum"
+          role="group"
+          aria-label="生效的筛选条件"
+        >
+          <span class="filter-sum__label">正在筛选</span>
+          <button
+            v-for="condition in storeConditions"
+            :key="condition.kind"
+            type="button"
+            class="filter-sum__item"
+            :class="{ 'filter-sum__item--warn': condition.warn }"
+            :aria-label="`取消${condition.text}`"
+            @click="clearStoreCondition(condition.kind)"
+          >
+            <span class="filter-sum__text">{{ condition.text }}</span>
+            <AppIcon name="x" :size="13" />
+          </button>
+          <span class="filter-sum__arrow">→</span>
+          <span class="filter-sum__count">共 {{ visibleStoreCount.toLocaleString('zh-CN') }} 条</span>
+          <button type="button" class="filter-sum__clear" @click="clearStoreFilters()">清除全部</button>
+        </div>
       </div>
 
-      <div v-if="listLoading('store')" class="card-grid">
+      <!-- 已有列表时保留旧内容，只加一条细进度：几千张卡换成骨架会让页面塌陷、滚动位置丢失 -->
+      <p v-if="listLoading('store') && state.market.length > 0" class="store-progress" role="status">
+        <span class="spinner" />
+        <span>正在读取索引源{{ state.storeProgress ? ` ${state.storeProgress} 个分页` : '…' }}</span>
+      </p>
+
+      <div v-if="indexErrorList().length" class="index-errors">
+        <div v-for="[url, message] in indexErrorList()" :key="url" class="index-errors__item">
+          <AppIcon name="alert-circle" :size="16" />
+          <span><span class="mono">{{ hostOf(url) }}</span> 读取失败：{{ message }}</span>
+        </div>
+      </div>
+
+      <!-- 首次进市场才用骨架屏 -->
+      <div v-if="listLoading('store') && state.market.length === 0" class="card-grid">
         <div v-for="n in 6" :key="n" class="skeleton-card" />
       </div>
 
@@ -565,43 +620,57 @@ function hostOf(url: string): string {
         </div>
       </div>
 
+      <!-- 搜索 0 结果：索引有内容，只是没匹配上 -->
+      <div v-else-if="storeSearchEmpty()" class="state-box">
+        <span class="state-box__icon"><AppIcon name="search" :size="40" /></span>
+        <span class="state-box__title">没有匹配「{{ state.storeQuery.trim() }}」的插件</span>
+        <span class="state-box__hint">
+          已搜索全部 {{ state.storeCorpusTotal.toLocaleString('zh-CN') }} 条
+        </span>
+        <button type="button" class="btn btn--primary state-box__action" @click="clearStoreFilters()">
+          清除搜索
+        </button>
+      </div>
+
+      <div v-else-if="storeIndexEmpty()" class="state-box">
+        <span class="state-box__icon"><AppIcon name="inbox" :size="40" /></span>
+        <span class="state-box__title">索引里没有插件</span>
+        <span class="state-box__hint">订阅的索引源这次没有返回任何条目，刷新或稍后再看</span>
+        <button type="button" class="btn btn--secondary state-box__action" @click="loadStore(true)">
+          刷新索引
+        </button>
+      </div>
+
       <div v-else-if="noStoreMatch()" class="state-box">
         <span class="state-box__icon"><AppIcon name="search" :size="40" /></span>
-        <span class="state-box__title">
-          {{ state.market.length ? '没有符合条件的插件' : '索引里没有插件' }}
-        </span>
-        <span class="state-box__hint">换个关键词，或清空搜索与筛选条件</span>
-        <button
-          v-if="state.market.length"
-          type="button"
-          class="btn btn--secondary state-box__action"
-          @click="clearStoreFilters()"
-        >
+        <span class="state-box__title">没有符合当前筛选的插件</span>
+        <span class="state-box__hint">按上面的筛选摘要逐项取消，或一次性清空全部条件</span>
+        <button type="button" class="btn btn--secondary state-box__action" @click="clearStoreFilters()">
           清除搜索与筛选
         </button>
       </div>
 
-      <template v-else>
-        <div v-if="indexErrorList().length" class="index-errors">
-          <div v-for="[url, message] in indexErrorList()" :key="url" class="index-errors__item">
-            <AppIcon name="alert-circle" :size="16" />
-            <span><span class="mono">{{ hostOf(url) }}</span> 读取失败：{{ message }}</span>
-          </div>
-        </div>
-
+      <div v-else class="store-list" :aria-busy="listLoading('store') ? 'true' : 'false'">
         <p v-if="storeTruncated" class="index-errors__item" role="status">
           <AppIcon name="alert-circle" :size="16" />
-          <span>索引共 {{ storeTruncated }} 个插件，已加载 {{ state.market.length }} 个（达到单次翻页上限）</span>
+          <span>
+            索引共 {{ storeTruncated.toLocaleString('zh-CN') }} 个插件，已加载
+            {{ state.market.length.toLocaleString('zh-CN') }} 个（达到单次翻页上限）
+          </span>
         </p>
 
         <p v-if="state.market.length > 500" class="store-hint">
-          已加载 {{ state.market.length }} 个条目：按名称、作者或关键词搜索比翻页快；列表按批渲染，点「显示更多」继续。
+          已加载 {{ state.market.length.toLocaleString('zh-CN') }} 个条目：按名称、作者或关键词搜索比翻页快；列表按批渲染，点「显示更多」继续。
         </p>
 
         <section v-for="group in renderedStoreGroups" :key="group.url" class="store-group">
           <header class="store-group__header">
             <span class="store-group__name">{{ group.title }}</span>
-            <span class="store-group__count">{{ group.total }}</span>
+            <span class="store-group__count">{{ group.total.toLocaleString('zh-CN') }}</span>
+            <span v-if="group.entries.length < group.total" class="store-group__rendered">
+              已渲染 {{ group.entries.length.toLocaleString('zh-CN') }} / 共
+              {{ group.total.toLocaleString('zh-CN') }}
+            </span>
             <span class="store-group__id">{{ hostOf(group.url) }}</span>
             <span class="store-group__rule" />
             <a
@@ -614,17 +683,23 @@ function hostOf(url: string): string {
               <AppIcon name="external-link" :size="14" />
             </a>
           </header>
-          <div class="card-grid">
-            <StorePluginCard v-for="entry in group.entries" :key="`${group.url}${entry.name}`" :entry="entry" />
+          <div class="card-grid" :class="{ 'card-grid--dense': denseStoreCards }">
+            <StorePluginCard
+              v-for="entry in group.entries"
+              :key="`${group.url}${entry.name}`"
+              :entry="entry"
+              :dense="denseStoreCards"
+            />
           </div>
         </section>
 
         <div v-if="storeHasMore" class="store-more">
           <button type="button" class="btn btn--secondary" @click="showMoreStore()">
-            显示更多（共 {{ visibleStoreCount }} 个，已显示 {{ state.storeRenderLimit }}）
+            显示更多（共 {{ visibleStoreCount.toLocaleString('zh-CN') }} 个，已显示
+            {{ state.storeRenderLimit.toLocaleString('zh-CN') }}）
           </button>
         </div>
-      </template>
+      </div>
     </template>
   </div>
 </template>

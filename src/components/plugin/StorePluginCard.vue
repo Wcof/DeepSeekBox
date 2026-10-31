@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { MarketEntry, RepoBranch } from '../../types/plugin'
 import { MARKET_LABEL_TAG, MARKET_LABEL_TEXT, githubRepoOf } from '../../types/plugin'
 import { pluginCenter } from '../../stores/pluginCenter'
 import AppIcon from '../icons/AppIcon.vue'
 import PluginTile from './PluginTile.vue'
 
-const props = defineProps<{ entry: MarketEntry }>()
+const props = withDefaults(defineProps<{ entry: MarketEntry; dense?: boolean }>(), {
+  dense: false,
+})
 
 const { state, installEntry, openDetail, loadRepoBranches, installBranchAt } = pluginCenter
 
@@ -137,7 +139,6 @@ async function installFromBranch(branch: RepoBranch): Promise<void> {
 }
 
 function onDocumentClick(event: MouseEvent): void {
-  if (!branchOpen.value) return
   if (root.value !== null && !root.value.contains(event.target as Node)) branchOpen.value = false
 }
 
@@ -145,18 +146,28 @@ function onKeydown(event: KeyboardEvent): void {
   if (event.key === 'Escape') branchOpen.value = false
 }
 
-onMounted(() => {
-  document.addEventListener('click', onDocumentClick, true)
-  document.addEventListener('keydown', onKeydown)
-})
-onBeforeUnmount(() => {
+function attachDocumentListeners(open: boolean): void {
+  if (open) {
+    document.addEventListener('click', onDocumentClick, true)
+    document.addEventListener('keydown', onKeydown)
+    return
+  }
   document.removeEventListener('click', onDocumentClick, true)
   document.removeEventListener('keydown', onKeydown)
-})
+}
+
+// 只在分支下拉真的打开时挂监听：120 张卡各挂两个 document 监听器是纯浪费
+watch(branchOpen, attachDocumentListeners)
+
+onBeforeUnmount(() => attachDocumentListeners(false))
 </script>
 
 <template>
-  <article ref="root" class="plugin-card" :class="{ 'plugin-card--open': branchOpen }">
+  <article
+    ref="root"
+    class="plugin-card"
+    :class="{ 'plugin-card--open': branchOpen, 'plugin-card--dense': dense }"
+  >
     <div class="plugin-card__header">
       <PluginTile :icon="entry.icon" />
       <div class="plugin-card__titles">
@@ -165,7 +176,6 @@ onBeforeUnmount(() => {
           <span class="tag" :class="MARKET_LABEL_TAG[entry.label]">
             {{ MARKET_LABEL_TEXT[entry.label] }}
           </span>
-          <span v-if="incompatible" class="tag tag--amber">版本不符</span>
         </div>
         <div class="plugin-card__id">{{ entry.name }}</div>
       </div>
@@ -182,7 +192,7 @@ onBeforeUnmount(() => {
         <span><AppIcon name="users" :size="14" /></span>
         <span>{{ entry.author }}</span>
       </div>
-      <div v-if="repositoryLabel" class="plugin-card__fact">
+      <div v-if="repositoryLabel" class="plugin-card__fact plugin-card__fact--repo">
         <span><AppIcon name="link" :size="14" /></span>
         <span class="mono">{{ repositoryLabel }}</span>
       </div>
@@ -340,6 +350,11 @@ onBeforeUnmount(() => {
 .plugin-card__version--button:hover {
   background: var(--color-surface-hover);
   color: var(--color-text);
+}
+
+.plugin-card__version--button:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
 }
 
 .branch-pop {

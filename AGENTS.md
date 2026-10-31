@@ -27,6 +27,7 @@ DeepSeek Harness 桌面端 APP 的前端工程，当前包含插件中心（安�
 - Vue 3 `<script setup>` + TypeScript + Vite；不引入 UI 组件库与路由库，样式手写。
 - `npm run dev`（端口 5180，`scripts/dev-rpc-mock.ts` 顶替宿主提供 `/api/rpc` 假数据）、`npm run build`（vue-tsc 类型检查 + 构建，postbuild 依次跑索引校验与组合包自检）、`npm run preview`。
 - `npm run validate:bundle` 单独跑组合包自检；改动 `package.json` / `cordis.patch.yml` / `index.js` / `client.js` / `locale/` 后必跑。
+- `npm run check:pinned` 单独跑精选置顶判据断言（8 条）；`npm run check:all` 一把跑齐 bundle / 两份索引 / 版本一致性 / 置顶判据。两项也都串在 postbuild 里，构建不通过就是没通过。
 
 ## 真实数据链路
 
@@ -37,7 +38,13 @@ DeepSeek Harness 桌面端 APP 的前端工程，当前包含插件中心（安�
 - 分支入口在卡片左下角的版本号上（不是弹窗）：点开是内联下拉，列分支、版本、要求范围、描述，逐行安装。安装分支走 `installBundle` 的 git spec（`git+https://github.com/<repo>#<分支>`），**不登记进索引**：索引只收录发布版本，分支是活口，随时会被上游重写。
 - 索引分两份：`index.json`（精选，人工收录）与 `community.json`（社区目录，从 dsh-plugin.org 同步）。社区条目只做**仓库级核实**——`git ls-remote` 能读到 HEAD、该提交的 package.json 声明 `dsh.bundle`、版本是 semver；字段一律取自仓库本身，不采信第三方目录的版本号。面板工具栏的「社区目录」按钮调 `setIndexes` 把 `community.json` 加进订阅，精选索引不掺沙子。
 - 市场列表按 `storeRenderLimit`（默认 120）分批渲染，避免社区目录几千条一次塞进 DOM；搜索与筛选会重置上限。搜索结果仍然走宿主，能覆盖全部条目。
+- 请求令牌：每次加载 / 搜索自带 `++state.storeRequest`，每个 await 之后都要 `isCurrent(token)`，过期即 return。取消路径按规定动作走——`cancelStoreSearch()` 作废在途请求**并替它补发一轮**（返回 true 表示已补发，调用方不要再自己 `loadStore`）；切 tab 只用 `clearStoreSearchTimers()`，不动在途请求。
+- **作废在途加载必须补发**：被作废的那次会在每个 await 后发现自己过期并直接 return，绝不会再回头把 `storeStatus` 写成 `ready`；不补发列表就永远停在骨架屏，用户只能手动刷新。社区目录 5,413 条要翻 55 页，首次加载好几秒，这个窗口经常撞上。
+- 两段式搜索：`scheduleStoreSearch` 防抖 260ms → `loadStoreSearch` 只取每个源的第 1 页先把首屏画出来；命中多于一页时延迟 `SEARCH_DEEP_DELAY=600ms` 再完整翻页补齐。已有列表时不换骨架屏，只在列表顶部显示细进度条（`state.storeProgress`），避免几千张卡塌陷、滚动位置丢失。清空搜索优先用 `fullMarket` 快照还原，不发新请求。
 - 大索引取数：`fetchIndexPages` 首页同步取，其余页按 `MARKET_PAGE_CONCURRENCY=6` 并发拉取，页号保序拼回（并发不能打乱「索引顺序」）；`MARKET_MAX_PAGES=60`，社区目录 5,413 条可整份读入。分面：创作者只显示前 12 位（可展开到 48），分类单独一行且计数不受分类自身筛选影响——几千条时这两处是主要噪音源。
+- 精选置顶：本仓库自带的 `index.json` 永远排第一组，且**不吃分批渲染的预算**（否则 5,413 条的社区目录会把它挤到看不见的位置）。判据是 `src/data/pinnedIndex.ts` 的纯函数 `isPinnedIndex`：末段是 `index.json`（剥掉 `?query` 与 `#hash` 后判断）+ 能解析出 owner/repo（认得 raw.githubusercontent.com 与 jsdelivr `/gh/`）+ 归属确是 `Wcof/DeepSeekBox`。第三条是安全边界——第三方索引随便起个 index.json 就能置顶，等于把首屏位交给订阅源；`Wcof/DeepSeekBox-attacker` 必须判否。改判据先改 `scripts/check-pinned-index.mjs` 的 8 条断言。
+- 空结果三态必须分开：`storeSearchEmpty`（搜不到）/ `storeIndexEmpty`（索引本身没条目）/ `noStoreMatch`（筛选组合为空）文案与操作各不相同，不能合并成一个「没有符合条件的插件」。
+- 筛选摘要 `storeConditions` 由 state 直接算出，不依赖分面 chip 是否还在——chip 会随分面重算消失，条件跟着消失的话列表就空得没来由。来源那一档（official / catalog / third-party）为 0 且列表非空时标 warn，多半是提供它的索引源被移除了；`installed` / `available` 为 0 是常态，不报警。
 - 安全：只接受 POST + 同源（`sec-fetch-site` 非 `cross-site`，`origin` 主机须与 `host` 一致），请求体上限 512 KiB。
 - 配置项编辑不在远程面里（只有模型侧 `Config.listConfigs`），所以详情页只做包信息与逐行启停，不提供配置表单。
 
