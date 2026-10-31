@@ -5,6 +5,7 @@ import type {
   MarketVersion,
   OperationResult,
   PluginRow,
+  RepoBranch,
 } from '../types/plugin'
 
 /**
@@ -203,6 +204,14 @@ export async function installBundle(
 
 export async function hostStatus(): Promise<{ pluginManager: boolean; pluginMarket: boolean }> {
   return rpc<{ pluginManager: boolean; pluginMarket: boolean }>('status')
+}
+
+// ============ 仓库分支 ============
+
+/** 列出插件仓库的分支（宿主用 git ls-remote 读，不消耗 GitHub API 配额） */
+export async function listRepoBranches(repo: string): Promise<RepoBranch[]> {
+  const result = await rpc<{ repo: string; branches: RepoBranch[] }>('repoBranches', { repo })
+  return result.branches ?? []
 }
 
 // ============ 插件商场 ============

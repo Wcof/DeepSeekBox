@@ -7,6 +7,7 @@ import type {
   MarketEntry,
   MarketIndexSummary,
   OperationResult,
+  RepoBranch,
   StoreFilter,
   StoreSortKey,
   Toast,
@@ -64,6 +65,14 @@ const state = reactive({
   updateNoticeDismissed: false,
   busy: {} as Record<string, boolean>,
 
+  /** 按分支安装：当前挑中的插件、它所属的 GitHub 仓库、以及拉到的分支列表 */
+  branchOpen: false,
+  branchEntry: null as MarketEntry | null,
+  branchRepo: null as string | null,
+  branchStatus: 'idle' as 'idle' | 'loading' | 'ready' | 'error',
+  branchError: '',
+  branches: [] as RepoBranch[],
+
   toasts: [] as Toast[],
   confirm: null as (ConfirmOptions & { resolve: (ok: boolean) => void }) | null,
 })
@@ -116,6 +125,9 @@ const ERROR_TEXT: Record<string, string> = {
   'bundle-in-use': '还有配置在使用这个组合包的组件，请先停用它们',
   'stale-approval': '待允许的安装脚本列表已变化，请重新安装',
   'incompatible-version': '这个插件与当前 DSH 版本不兼容',
+  'github-rate-limited': 'GitHub 接口被限流了，过几分钟再试',
+  'repo-unavailable': '找不到这个仓库或它没有可读的分支',
+  'github-unavailable': '读不到 GitHub 上的分支',
   'operation-error': '宿主操作失败',
 }
 
@@ -508,6 +520,98 @@ async function installSpec(spec: string): Promise<boolean> {
   return done === true
 }
 
+// ============ 按分支安装 ============
+
+/**
+ * 上游不一定把修复合进主线、也不一定发版；分支是它们已经在用的活口。
+ * 这里只让用户选「分支」——装的是该分支当前的头，后续提交会改变它，
+ * 所以入口处要如实说明，不假装它是固定版本。
+ */
+function repoSlugOf(entry: MarketEntry): string | null {
+  const url = entry.repository ?? entry.homepage ?? ''
+  const match = /github\.com\/([^/]+)\/([^/#?]+)/i.exec(url)
+  if (match === null) return null
+  return `${match[1]}/${match[2].replace(/\.git$/, '')}`
+}
+
+function resetBranchDialog(): void {
+  state.branchOpen = false
+  state.branchEntry = null
+  state.branchRepo = null
+  state.branchStatus = 'idle'
+  state.branchError = ''
+  state.branches = []
+}
+
+function branchBusy(): boolean {
+  return Object.keys(state.busy).some((key) => key.startsWith('branch-install:'))
+}
+
+async function loadBranches(): Promise<void> {
+  const repo = state.branchRepo
+  if (repo === null) return
+  state.branchStatus = 'loading'
+  state.branchError = ''
+  try {
+    state.branches = await service.listRepoBranches(repo)
+    state.branchStatus = 'ready'
+  } catch (error) {
+    state.branches = []
+    state.branchStatus = 'error'
+    state.branchError = describe(error)
+  }
+}
+
+async function openBranches(entry: MarketEntry): Promise<void> {
+  const repo = repoSlugOf(entry)
+  if (repo === null) {
+    toast('warning', '这个插件没有提供 GitHub 仓库地址，没法按分支安装')
+    return
+  }
+  state.branchEntry = entry
+  state.branchRepo = repo
+  state.branchOpen = true
+  state.branches = []
+  await loadBranches()
+}
+
+function closeBranches(): void {
+  if (branchBusy()) return
+  resetBranchDialog()
+}
+
+async function installBranch(branch: RepoBranch): Promise<void> {
+  const entry = state.branchEntry
+  const repo = state.branchRepo
+  if (entry === null || repo === null) return
+  if (!branch.bundle) {
+    toast('warning', `${branch.name} 分支没有声明组合包，装进来也不能按插件管理`)
+    return
+  }
+  await withBusy(`branch-install:${repo}#${branch.name}`, async () => {
+    const spec = `git+https://github.com/${repo}#${branch.name}`
+    try {
+      const result = await service.installBundle(spec)
+      const failure = resultMessage(result)
+      if (failure) {
+        toast('error', `安装失败：${failure}`)
+        return
+      }
+      const version = branch.version ? ` v${branch.version}` : ''
+      const restart = result.application === 'restart-required'
+      toast(
+        restart ? 'warning' : 'success',
+        `已安装 ${entry.title}${version}（${branch.name} 分支）${restart ? '，重启 DSH 后生效' : ''}`,
+      )
+      resetBranchDialog()
+      await loadLocal()
+      await loadStore()
+    } catch (error) {
+      toast('error', `安装失败：${describe(error)}`)
+    }
+  })
+}
+
 // ============ 详情页 ============
 
 function openDetail(name: string): void {
@@ -759,6 +863,12 @@ export const pluginCenter = {
   installSpec,
   openInstallDialog,
   closeInstallDialog,
+
+  openBranches,
+  closeBranches,
+  loadBranches,
+  installBranch,
+  branchBusy,
 
   openDetail,
   closeDetail,

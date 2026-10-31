@@ -185,6 +185,49 @@ export function createDevRpcMock() {
   const bundleNamed = (name: string) => bundles.find((item) => item.name === name)
   const marketEntry = (name: string) => market.find((item) => item.name === name)
 
+  /** 按分支安装的假数据：形状对齐宿主 repoBranches（版本号/engines 取自真实仓库） */
+  const branchSets: Record<string, Array<Record<string, unknown>>> = {
+    'joeseesun/qiaomu-home-dsh': [
+      {
+        name: 'main',
+        commit: '45f0c1af9b7dacce424eb87c80d4f3a3c5ab4f70',
+        version: '0.3.1',
+        enginesDsh: '0.2.1-rc.2 || 0.2.1-rc.3',
+        bundle: true,
+      },
+      {
+        name: 'codex/dsh-rc5-20261031',
+        commit: '0778bbc6da4e3c1f8256104cc29d281b695b59f5',
+        version: '0.3.2',
+        enginesDsh: '0.2.1-rc.2 || 0.2.1-rc.3 || 0.2.1-rc.4 || 0.2.1-rc.5',
+        bundle: true,
+      },
+      {
+        name: 'docs/readme-only',
+        commit: 'd5b180d3d46e89585e062c375e3c6f8218bcc036',
+        version: null,
+        enginesDsh: null,
+        bundle: false,
+      },
+    ],
+    'joeseesun/qiaomu-rss-dsh': [
+      {
+        name: 'main',
+        commit: '7f2deb7ed9583675927663de74d97f70b277c52e',
+        version: '0.9.2',
+        enginesDsh: '0.2.1-rc.2 || 0.2.1-rc.3',
+        bundle: true,
+      },
+      {
+        name: 'codex/dsh-rc5-20261031',
+        commit: '10dc829b1e29264f2df7fb201497cf41b155929d',
+        version: '0.9.3',
+        enginesDsh: '0.2.1-rc.2 || 0.2.1-rc.3 || 0.2.1-rc.4 || 0.2.1-rc.5',
+        bundle: true,
+      },
+    ],
+  }
+
   function installationOf(name: string) {
     const installed = bundleNamed(name)
     if (installed === undefined) return { status: 'not-installed' as const }
@@ -234,10 +277,15 @@ export function createDevRpcMock() {
       case 'installBundle': {
         const spec = String(params.spec)
         await sleep(700)
-        const name = spec.startsWith('git+') ? spec.split('/').pop()?.split('#')[0] ?? spec : spec
+        // git spec 的包名在仓库路径里，分支名可能带斜杠，不能简单取最后一段
+        const name = spec.startsWith('git+')
+          ? /github\.com\/[^/]+\/([^/#]+)/.exec(spec)?.[1] ?? spec
+          : spec
         const existing = bundleNamed(name)
         if (existing) {
-          existing.version = marketEntry(name)?.defaultVersion ?? existing.version
+          existing.source = spec
+          if (spec.includes('#')) existing.version = '0.3.2'
+          else existing.version = marketEntry(name)?.defaultVersion ?? existing.version
           return { changed: true, application: 'applied', stage: 'install', target: name }
         }
         bundles.push(
@@ -248,6 +296,11 @@ export function createDevRpcMock() {
           }),
         )
         return { changed: true, application: 'applied', stage: 'install', target: name }
+      }
+      case 'repoBranches': {
+        const repo = String(params.repo)
+        await sleep(250)
+        return { repo, branches: branchSets[repo] ?? [] }
       }
       case 'listIndexes':
         return indexes

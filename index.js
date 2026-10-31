@@ -12,6 +12,8 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url))
@@ -21,6 +23,7 @@ const ROUTE = '/deepseekbox'
 const ROUTE_PREFIX = `${ROUTE}/`
 const API_ROUTE = `${ROUTE}/api/rpc`
 const MAX_BODY_BYTES = 512 * 1024
+const execFileAsync = promisify(execFile)
 
 const MIME = new Map([
   ['.html', 'text/html; charset=utf-8'],
@@ -154,6 +157,109 @@ function boolParam(params, key) {
   return value
 }
 
+// ============ 仓库分支：按分支安装 ============
+
+const REPO_SLUG = /^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9._-]{1,100}$/
+const BRANCH_CACHE_TTL_MS = 60_000
+const branchCache = new Map()
+
+/**
+ * 列分支优先走 `git ls-remote --heads`：GitHub 的 REST 接口未登录只有 60 次/小时，
+ * 装几次插件就可能被限流；ls-remote 不受此限，也不依赖 token。
+ * git 不可用时退回 REST 接口，让功能不至于整块失效。
+ */
+async function branchesByGit(repo) {
+  const { stdout } = await execFileAsync(
+    'git',
+    ['ls-remote', '--heads', `https://github.com/${repo}`],
+    {
+      timeout: 20_000,
+      maxBuffer: 4 * 1024 * 1024,
+      env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+    },
+  )
+  const branches = []
+  for (const line of stdout.split('\n')) {
+    const [sha, ref] = line.trim().split('\t')
+    if (!ref?.startsWith('refs/heads/')) continue
+    branches.push({ name: ref.slice('refs/heads/'.length), commit: sha })
+  }
+  return branches
+}
+
+async function branchesByApi(repo) {
+  const response = await fetch(`https://api.github.com/repos/${repo}/branches?per_page=100`, {
+    headers: {
+      accept: 'application/vnd.github+json',
+      'user-agent': 'DeepSeekBox-PluginCenter',
+      'x-github-api-version': '2022-11-28',
+    },
+    signal: AbortSignal.timeout(15_000),
+  })
+  if (response.status === 403 || response.status === 429) {
+    throw new ApiError('github-rate-limited', 'GitHub 接口限流了，过几分钟再试')
+  }
+  if (response.status === 404) throw new ApiError('repo-unavailable', `找不到仓库 ${repo}`)
+  if (!response.ok) throw new ApiError('github-unavailable', `GitHub 返回 ${response.status}`)
+  const list = await response.json()
+  if (!Array.isArray(list)) throw new ApiError('github-unavailable', 'GitHub 返回了意外的结构')
+  return list.map((item) => ({ name: item.name, commit: item.commit?.sha }))
+}
+
+/** 读某个分支上的 package.json：版本号、engines.dsh、是否声明了组合包 */
+async function branchManifest(repo, branch) {
+  const ref = branch.split('/').map(encodeURIComponent).join('/')
+  try {
+    const response = await fetch(`https://raw.githubusercontent.com/${repo}/${ref}/package.json`, {
+      signal: AbortSignal.timeout(15_000),
+    })
+    if (!response.ok) return undefined
+    const manifest = await response.json()
+    return typeof manifest === 'object' && manifest !== null ? manifest : undefined
+  } catch {
+    return undefined
+  }
+}
+
+async function readRepoBranches(repo) {
+  if (!REPO_SLUG.test(repo)) {
+    throw new ApiError('invalid-params', '仓库名必须是 owner/name 形式')
+  }
+  const cached = branchCache.get(repo)
+  if (cached !== undefined && Date.now() - cached.at < BRANCH_CACHE_TTL_MS) return cached.value
+
+  let listed
+  try {
+    listed = await branchesByGit(repo)
+  } catch (error) {
+    // 仓库不存在 / 无权限时 git 的报错是准的，别再拿 REST 接口的限流结果覆盖它
+    const stderr = String(error?.stderr ?? error?.message ?? '')
+    if (/not found|does not exist|could not read Username|Authentication failed/i.test(stderr)) {
+      throw new ApiError('repo-unavailable', `找不到仓库 ${repo}，或它需要授权才能读`)
+    }
+    listed = await branchesByApi(repo)
+  }
+  if (listed.length === 0) throw new ApiError('repo-unavailable', `仓库 ${repo} 没有可读的分支`)
+
+  const branches = await Promise.all(
+    listed.map(async (branch) => {
+      const manifest = await branchManifest(repo, branch.name)
+      return {
+        name: branch.name,
+        commit: branch.commit ?? null,
+        version: typeof manifest?.version === 'string' ? manifest.version : null,
+        enginesDsh: typeof manifest?.engines?.dsh === 'string' ? manifest.engines.dsh : null,
+        bundle: manifest?.dsh?.bundle !== undefined && manifest.dsh.bundle !== null,
+      }
+    }),
+  )
+  branches.sort((a, b) => a.name.localeCompare(b.name))
+
+  const value = { repo, branches }
+  branchCache.set(repo, { at: Date.now(), value })
+  return value
+}
+
 const API_METHODS = {
   status(ctx) {
     return {
@@ -212,6 +318,9 @@ const API_METHODS = {
       limit: Math.min(Math.max(Number(query.limit) || 50, 1), 100),
       offset: Math.max(Number(query.offset) || 0, 0),
     })
+  },
+  repoBranches(ctx, params) {
+    return readRepoBranches(textParam(params, 'repo'))
   },
 }
 

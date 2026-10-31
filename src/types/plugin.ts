@@ -120,6 +120,17 @@ export interface MarketIndexSummary {
   error?: string
 }
 
+/** 插件仓库里的一个分支：按分支安装时给用户挑，不是 commit 选择器 */
+export interface RepoBranch {
+  name: string
+  /** 分支头提交，仅作信息展示 */
+  commit?: string | null
+  version?: string | null
+  enginesDsh?: string | null
+  /** 该分支的 package.json 是否声明了 dsh.bundle */
+  bundle: boolean
+}
+
 /** 启停 / 删除 / 安装这类操作的统一结果 */
 export interface OperationResult {
   changed: boolean

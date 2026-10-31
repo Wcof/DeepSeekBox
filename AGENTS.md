@@ -17,7 +17,7 @@ DeepSeek Harness 桌面端 APP 的前端工程，当前包含插件中心（安�
 - `src/services/pluginService.ts` —— 真实内核接口层：POST `/deepseekbox/api/rpc`，方法名与 Host 半边一一对应；不做本地缓存。
 - `src/stores/pluginCenter.ts` —— 插件中心唯一状态 owner（列表、搜索、筛选、busy、通知、确认弹窗），每次操作后回读宿主。
 - `src/components/plugin/` —— 插件中心页面：`PluginCenter`（双 Tab + 工具栏 + 列表状态）、`LocalPluginCard`（组合包）、`StorePluginCard`（索引条目）、`PluginDetailPage`（包信息 + 逐行启停）、`PluginTile`。
-- `src/components/ui/` —— 通用组件：通知条、确认弹窗、筛选下拉、安装对话框。
+- `src/components/ui/` —— 通用组件：通知条、确认弹窗、筛选下拉、安装对话框、按分支安装对话框（`BranchDialog`）。
 - `src/components/icons/` —— 图标常量。
 - `src/styles/global.css` —— 设计令牌与全局样式（按钮、标签、卡片、弹窗、通知条）。
 
@@ -30,8 +30,10 @@ DeepSeek Harness 桌面端 APP 的前端工程，当前包含插件中心（安�
 ## 真实数据链路
 
 - 页面只认 `pluginService`；它把每个动作翻译成 `POST /deepseekbox/api/rpc` 的 `{ method, params }`，**不保存任何本地插件状态**。
-- Host 半边的方法表（`API_METHODS`）：`status`、`listBundles`、`listPlugins`、`setBundleEnabled`、`setPluginEnabled`、`removeBundle`、`installBundle`、`listIndexes`、`setIndexes`、`searchMarket`。
+- Host 半边的方法表（`API_METHODS`）：`status`、`listBundles`、`listPlugins`、`setBundleEnabled`、`setPluginEnabled`、`removeBundle`、`installBundle`、`listIndexes`、`setIndexes`、`searchMarket`、`repoBranches`。
 - 服务来源：`ctx.get('pluginManager')` 与 `ctx.get('pluginMarket')`，都是 DSH 自带的远程面实现；缺失时返回 503 `service-unavailable`，页面显示「当前 profile 没有装载插件管理服务」。
+- `repoBranches` 是唯一一处不由 DSH 服务提供的方法：上游常把修复合在分支上却不发版，面板因此允许「按分支安装」。它先用 `git ls-remote --heads https://github.com/<owner>/<repo>` 列分支（GitHub REST 未登录只有 60 次/小时，容易限流；git 不受限也不用 token），git 不可用时才退回 REST；分支上的版本号、`engines.dsh`、是否声明 `dsh.bundle` 逐个从 `raw.githubusercontent.com/<repo>/<branch>/package.json` 读取。结果按仓库缓存 60 秒。仓库名先过 `owner/name` 正则，git 用参数数组调用（不过 shell）。失败码：`invalid-params`、`repo-unavailable`、`github-rate-limited`、`github-unavailable`。
+- 安装分支走 `installBundle` 的 git spec（`git+https://github.com/<repo>#<分支>`），**不登记进索引**：索引只收录发布版本，分支是活口，随时会被上游重写。
 - 安全：只接受 POST + 同源（`sec-fetch-site` 非 `cross-site`，`origin` 主机须与 `host` 一致），请求体上限 512 KiB。
 - 配置项编辑不在远程面里（只有模型侧 `Config.listConfigs`），所以详情页只做包信息与逐行启停，不提供配置表单。
 
@@ -63,8 +65,8 @@ DeepSeek Harness 桌面端 APP 的前端工程，当前包含插件中心（安�
 - 改动后运行 `npm run build`；涉及 UI 视觉时启动 `npm run dev` 并核对两个 Tab、详情页、通知条、确认弹窗与安装对话框。
 - 涉及收录库或索引时：`npm run build` 后检查 `web/index.json`（10 个插件、format 1），并用 `npm run preview` 确认 `/index.json` 可访问。收录或升版后跑一遍 `npm run check:engines`：它按索引登记的 commit 拉真实 package.json 核对版本与 `engines.dsh`，并列出上游已有更新版本的插件；不一致时退出码为 1。
 - 涉及组合包时：`npm run validate:bundle` 必须通过；再按 Host 路由自查项验证 `/deepseekbox/` 入口页 200、静态资源 200、`/deepseekbox` 308 补斜杠、路径穿越不返回 200、缺 `web/` 时 503 带修复提示。
-- 涉及 API 时：用假 ctx 起本地 HTTP 覆盖 `listBundles` / `setBundleEnabled` / `installBundle` / `searchMarket` 的透传、跨站与异源拒绝、未知方法 400、非 POST 405；真实链路只能在 DSH 内验证（`ctx.get('pluginManager')` 存在与否）。
-- 操作路径清单：检查更新 → 一键更新 / 单个更新、启用 / 停用组合包、卸载二次确认、商场安装与更新、按包名 / git / 本地目录安装、详情页逐行启停。
+- 涉及 API 时：用假 ctx 起本地 HTTP 覆盖 `listBundles` / `setBundleEnabled` / `installBundle` / `searchMarket` / `repoBranches` 的透传、跨站与异源拒绝、未知方法 400、非 POST 405；`repoBranches` 另外覆盖非法仓库名 400 `invalid-params`、不存在的仓库 `repo-unavailable`、以及重复调用命中缓存（第二次应明显快于第一次）。真实链路只能在 DSH 内验证（`ctx.get('pluginManager')` 存在与否）。
+- 操作路径清单：检查更新 → 一键更新 / 单个更新、启用 / 停用组合包、卸载二次确认、商场安装与更新、按包名 / git / 本地目录安装、按分支安装（分支列表 → 挑分支 → 安装）、详情页逐行启停。
 
 ## 项目特有红线
 
@@ -72,4 +74,5 @@ DeepSeek Harness 桌面端 APP 的前端工程，当前包含插件中心（安�
 - 界面参考图只约束视觉风格，不照搬图中的示例插件与示例操作。
 - 官方索引校验器**不检查**「包是否声明了组合包」，索引通过不代表装得上；上架或升版前必须跑 `npm run validate:bundle`。
 - `web/` 是随包提交的产物，改动前端后必须重新 `npm run build` 并连同源码一起提交，不允许只提交源码。
+- 索引只登记发布版本（Release tag 或 package.json 变更提交）。上游把修复合在未合并分支上时，用「按分支安装」这条旁路，不把索引指向分支或 draft PR。
 - 页面里不允许再出现假数据；替身只允许存在于 `scripts/dev-rpc-mock.ts`（仅 dev server 生效，不进 `web/`），且新增字段必须与宿主真实返回结构一致。

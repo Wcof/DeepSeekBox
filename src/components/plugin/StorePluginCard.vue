@@ -8,9 +8,14 @@ import PluginTile from './PluginTile.vue'
 
 const props = defineProps<{ entry: MarketEntry }>()
 
-const { state, installEntry, openDetail } = pluginCenter
+const { state, installEntry, openDetail, openBranches } = pluginCenter
 
 const installing = computed(() => state.busy[`install:${props.entry.name}`] === true)
+
+/** 只有能定位到 GitHub 仓库的条目才谈得上按分支安装 */
+const canPickBranch = computed(() =>
+  /github\.com\//i.test(props.entry.repository ?? props.entry.homepage ?? ''),
+)
 
 const preferredVersion = computed(
   () =>
@@ -131,6 +136,15 @@ const repositoryLabel = computed(() => {
         </template>
 
         <span class="plugin-card__actions">
+          <button
+            v-if="canPickBranch"
+            type="button"
+            class="btn btn--secondary btn--sm"
+            title="挑一个分支安装（上游没发版时的活口）"
+            @click="openBranches(entry)"
+          >
+            分支
+          </button>
           <button
             v-if="action === 'detail'"
             type="button"
