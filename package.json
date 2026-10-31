@@ -1,7 +1,7 @@
 {
   "name": "deepseek-box",
   "private": true,
-  "version": "0.5.1",
+  "version": "0.5.2",
   "type": "module",
   "description": "DeepSeek Harness 插件中心：安装、更新与管理 DSH 插件，聚合插件索引源，并发布可订阅的 DSH 插件索引。",
   "keywords": [

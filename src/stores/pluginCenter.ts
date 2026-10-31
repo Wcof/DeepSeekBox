@@ -741,8 +741,10 @@ const authorOf = (entry: MarketEntry): string => entry.author?.trim() || UNKNOWN
  * 创作者分面：只按来源筛选统计，因此选中某个创作者后其他档的计数不会塌成 0。
  * 每条索引条目只有一个 author，所以多选是「任一命中」，不做「同时属于多人」的交集。
  */
-const AUTHOR_FACET_LIMIT = 12
-const AUTHOR_FACET_EXPANDED = 48
+const AUTHOR_FACET_LIMIT = 8
+const AUTHOR_FACET_EXPANDED = 24
+/** 作者数超过这个量级时，chip 已经没有筛选价值，改用搜索 */
+const AUTHOR_FACET_OVERFLOW = 200
 
 const authorFacetAll = computed(() => {
   const counts = new Map<string, number>()
@@ -755,6 +757,9 @@ const authorFacetAll = computed(() => {
     .map(([author, count]) => ({ author, count }))
     .sort((a, b) => b.count - a.count || a.author.localeCompare(b.author, 'zh-Hans-CN'))
 })
+
+const authorFacetTotal = computed(() => authorFacetAll.value.length)
+const authorFacetOverflow = computed(() => authorFacetTotal.value > AUTHOR_FACET_OVERFLOW)
 
 /** 几千条社区条目会带来上千位作者，分面只展示头部，其余交给搜索 */
 const authorFacets = computed(() =>
@@ -966,6 +971,8 @@ export const pluginCenter = {
   storeTruncated,
   authorFacets,
   authorFacetsHidden,
+  authorFacetTotal,
+  authorFacetOverflow,
   toggleAuthorFacets,
   setStoreAuthor,
   categoryFacets,

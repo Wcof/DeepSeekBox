@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { pluginCenter } from '../../stores/pluginCenter'
 import { MARKET_CATEGORY_LABEL } from '../../types/plugin'
 import type { LocalFilter, StoreFilter } from '../../types/plugin'
@@ -15,6 +16,8 @@ const {
   storeTruncated,
   authorFacets,
   authorFacetsHidden,
+  authorFacetTotal,
+  authorFacetOverflow,
   toggleAuthorFacets,
   setStoreAuthor,
   categoryFacets,
@@ -61,10 +64,20 @@ const LOCAL_CHIPS: ReadonlyArray<{ key: LocalFilter; label: string }> = LOCAL_CA
   ({ key, chip }) => ({ key, label: chip }),
 )
 
-const STORE_CHIPS: ReadonlyArray<{ key: StoreFilter; label: string }> = [
-  ...STORE_CARDS.map(({ key, chip }) => ({ key, label: chip })),
+/**
+ * 市场侧的统计卡与 chips 按数据出现：只有真的存在某个来源时才显示那一档，
+ * 避免订阅了社区目录后还摆着「DSH 官方 0 / 第三方 0」两张空卡。
+ */
+const storeCards = computed(() =>
+  STORE_CARDS.filter(
+    (card) => card.key === 'all' || card.key === 'installed' || storeStats.value[card.key] > 0,
+  ),
+)
+
+const storeChips = computed<ReadonlyArray<{ key: StoreFilter; label: string }>>(() => [
+  ...storeCards.value.map(({ key, chip }) => ({ key, label: chip })),
   { key: 'available', label: '可安装' },
-]
+])
 
 const LOCAL_SORTS = [
   { value: 'status', label: '状态优先' },
@@ -351,7 +364,7 @@ function hostOf(url: string): string {
     <template v-else>
       <section v-if="state.storeStatus === 'ready'" class="stats" aria-label="收录来源统计">
         <button
-          v-for="card in STORE_CARDS"
+          v-for="card in storeCards"
           :key="card.key"
           type="button"
           class="stat"
@@ -393,7 +406,7 @@ function hostOf(url: string): string {
 
         <div class="chips" role="group" aria-label="按来源筛选">
           <button
-            v-for="chip in STORE_CHIPS"
+            v-for="chip in storeChips"
             :key="chip.key"
             type="button"
             class="chip"
@@ -432,10 +445,10 @@ function hostOf(url: string): string {
             v-if="authorFacetsHidden > 0"
             type="button"
             class="chip chip--ghost"
-            :title="`还有 ${authorFacetsHidden} 位作者，点开显示更多；找特定作者用搜索更快`"
+            :title="`还有 ${authorFacetsHidden} 位作者；作者太多时直接搜名字更快`"
             @click="toggleAuthorFacets()"
           >
-            更多作者 +{{ authorFacetsHidden }}
+            更多作者
           </button>
           <button
             v-else-if="state.authorFacetsExpanded"
@@ -445,7 +458,10 @@ function hostOf(url: string): string {
           >
             收起作者
           </button>
-          <span v-if="state.storeAuthors.length > 1" class="facets__hint">多选取任一命中</span>
+          <span v-if="authorFacetOverflow" class="facets__hint">
+            共 {{ authorFacetTotal }} 位作者，这里只列高产的前几位；找特定作者用搜索
+          </span>
+          <span v-else-if="state.storeAuthors.length > 1" class="facets__hint">多选取任一命中</span>
         </div>
 
         <div v-if="categoryFacets.length > 1" class="facets">
