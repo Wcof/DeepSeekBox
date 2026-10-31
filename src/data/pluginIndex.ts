@@ -134,7 +134,7 @@ const INDEX_ICONS: Record<string, string> = {
   'dsh-oh-my-terminal':
     'https://raw.githubusercontent.com/btsd321/dsh-oh-my-terminal/e40df7b16a162b4df57bd9f77001474d347da748/icon.jpg',
   'dsh-our-free-model':
-    'https://raw.githubusercontent.com/Ebony-Vinyl/dsh-our-free-model/e1b347aec9cc956eda70a766219f028a811078e2/icon.svg',
+    'https://raw.githubusercontent.com/Ebony-Vinyl/dsh-our-free-model/5fcb5faf4da7843cb0d0e638ce665dd6cd4aafc1/icon.svg',
   'dsh-guizang-design':
     'https://raw.githubusercontent.com/op7418/dsh-guizang-design/c0bc1ec0accf6312f6e1e066cabb460b54da2b97/icon.png',
 }
@@ -182,7 +182,7 @@ const VERSION_SOURCES: Record<
   'dsh-spotlight': { publishTimestamp: 1787561813, commit: '471dee2c528bc7203669f3e540d38181b657abe4' }, // package.json 提交 · 2026-08-24T08:56:53Z；engines 只有 node
   'dsh-quick-open': { publishTimestamp: 1791618520, commit: '81b04057d2ce6f7ad585b0d94a3de895c4f26143' }, // package.json 提交 · 2026-10-10T07:48:40Z；无 engines，DSH 要求写在 peerDependencies
   'dsh-oh-my-terminal': { publishTimestamp: 1793184490, commit: 'e40df7b16a162b4df57bd9f77001474d347da748' }, // release tag v0.4.7 解包 · 2026-10-28T10:48:10Z；engines 只有 node
-  'dsh-our-free-model': { publishTimestamp: 1792990970, commit: 'e1b347aec9cc956eda70a766219f028a811078e2' }, // release v2.7.2 · 2026-10-26T05:02:50Z；engines 只有 node
+  'dsh-our-free-model': { publishTimestamp: 1793344626, commit: '5fcb5faf4da7843cb0d0e638ce665dd6cd4aafc1' }, // release v2.7.3 · 2026-10-30T07:17:06Z（annotated tag 的对象是 4253688，取解引用后的提交）；engines 只有 node
   'dsh-guizang-design': {
     publishTimestamp: 1793371802,
     commit: 'c0bc1ec0accf6312f6e1e066cabb460b54da2b97',

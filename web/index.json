@@ -79,11 +79,11 @@
       "versions": [
         {
           "version": "0.3.3",
-          "publishTimestamp": 1793408945,
+          "publishTimestamp": 1793409028,
           "source": {
             "type": "git",
             "url": "https://github.com/Wcof/DeepSeekBox",
-            "commit": "020a2ac645ad9bb72143542f73716a2c41453d50"
+            "commit": "ba9f75c658a0f01d47c5f982850363073f2abc4a"
           },
           "engines": {}
         }
@@ -374,7 +374,7 @@
         "zh": "免登录、免 API Key 使用 DeepSeek V4.1 Flash、Kimi K3 等免费模型，含用量看板与 OpenAI 兼容本地转发。"
       },
       "author": "Ebony-Vinyl",
-      "icon": "https://raw.githubusercontent.com/Ebony-Vinyl/dsh-our-free-model/e1b347aec9cc956eda70a766219f028a811078e2/icon.svg",
+      "icon": "https://raw.githubusercontent.com/Ebony-Vinyl/dsh-our-free-model/5fcb5faf4da7843cb0d0e638ce665dd6cd4aafc1/icon.svg",
       "homepage": "https://github.com/Ebony-Vinyl/dsh-our-free-model",
       "repository": {
         "url": "https://github.com/Ebony-Vinyl/dsh-our-free-model"
@@ -390,12 +390,12 @@
       },
       "versions": [
         {
-          "version": "2.7.2",
-          "publishTimestamp": 1792990970,
+          "version": "2.7.3",
+          "publishTimestamp": 1793344626,
           "source": {
             "type": "git",
             "url": "https://github.com/Ebony-Vinyl/dsh-our-free-model",
-            "commit": "e1b347aec9cc956eda70a766219f028a811078e2"
+            "commit": "5fcb5faf4da7843cb0d0e638ce665dd6cd4aafc1"
           },
           "engines": {}
         }

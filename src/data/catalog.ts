@@ -206,7 +206,7 @@ export const THIRD_PARTY_REGISTRY: CreatorGroup[] = [
         alias: '免费模型接入',
         description:
           '免登录、免 API Key 使用 DeepSeek V4.1 Flash、Kimi K3 等免费模型，含用量看板与 OpenAI 兼容本地转发。',
-        version: '2.7.2',
+        version: '2.7.3',
         author: 'Ebony-Vinyl',
         license: 'MIT',
         source: 'third-party',
