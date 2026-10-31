@@ -1,0 +1,16 @@
+{
+  "format": 1,
+  "title": { "en": "DeepSeekBox Empty Index (fixture)", "zh": "DeepSeekBox 空索引（测试夹具）" },
+  "description": {
+    "en": "Test fixture: a valid format-1 index with zero plugins. Used to verify the empty-index state in the plugin center.",
+    "zh": "测试夹具：合法的 format 1 索引但包含 0 个插件，用于验证插件中心的「索引里没有插件」状态。"
+  },
+  "metadata": {
+    "categories": {
+      "tools": { "title": { "en": "Tools", "zh": "工具" } }
+    },
+    "labels": {},
+    "sortKeys": {}
+  },
+  "plugins": []
+}
