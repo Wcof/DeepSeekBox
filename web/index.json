@@ -71,19 +71,19 @@
         "category": "tools",
         "keywords": [
           "DeepSeekBox",
-          "official"
+          "deepseekbox"
         ],
         "labels": [],
         "sortKeys": {}
       },
       "versions": [
         {
-          "version": "0.4.0",
-          "publishTimestamp": 1793410830,
+          "version": "0.4.1",
+          "publishTimestamp": 1793410841,
           "source": {
             "type": "git",
             "url": "https://github.com/Wcof/DeepSeekBox",
-            "commit": "899566a10b19012ce562ed409f1e2e152984f658"
+            "commit": "fff782de2da3fb3b314e34283486ee0bc81a0550"
           },
           "engines": {}
         }
@@ -109,7 +109,7 @@
         "category": "reading",
         "keywords": [
           "乔木 RSS",
-          "official"
+          "deepseekbox"
         ],
         "labels": [],
         "sortKeys": {}
@@ -149,7 +149,7 @@
         "category": "reading",
         "keywords": [
           "乔木阅读",
-          "official"
+          "deepseekbox"
         ],
         "labels": [],
         "sortKeys": {}
@@ -189,7 +189,7 @@
         "category": "learning",
         "keywords": [
           "乔木 UI 学习",
-          "official"
+          "deepseekbox"
         ],
         "labels": [],
         "sortKeys": {}
@@ -229,7 +229,7 @@
         "category": "productivity",
         "keywords": [
           "乔木 Home",
-          "official"
+          "deepseekbox"
         ],
         "labels": [],
         "sortKeys": {}
@@ -269,7 +269,7 @@
         "category": "ui",
         "keywords": [
           "命令面板",
-          "third-party"
+          "deepseekbox"
         ],
         "labels": [],
         "sortKeys": {}
@@ -307,7 +307,7 @@
         "category": "ui",
         "keywords": [
           "快速打开",
-          "third-party"
+          "deepseekbox"
         ],
         "labels": [],
         "sortKeys": {}
@@ -345,7 +345,7 @@
         "category": "tools",
         "keywords": [
           "终端面板",
-          "third-party"
+          "deepseekbox"
         ],
         "labels": [],
         "sortKeys": {}
@@ -383,7 +383,7 @@
         "category": "models",
         "keywords": [
           "免费模型接入",
-          "third-party"
+          "deepseekbox"
         ],
         "labels": [],
         "sortKeys": {}
@@ -421,7 +421,7 @@
         "category": "productivity",
         "keywords": [
           "归藏设计",
-          "third-party"
+          "deepseekbox"
         ],
         "labels": [],
         "sortKeys": {}

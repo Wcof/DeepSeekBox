@@ -206,7 +206,20 @@ async function branchesByApi(repo) {
   return list.map((item) => ({ name: item.name, commit: item.commit?.sha }))
 }
 
-/** 读某个分支上的 package.json：版本号、engines.dsh、是否声明了组合包 */
+/** package.json 里的展示字段可能是字符串或 { zh, en } 映射，统一取一条文本 */
+function textOf(value) {
+  if (typeof value === 'string') return value.trim() === '' ? null : value
+  if (typeof value === 'object' && value !== null) {
+    for (const key of ['zh', 'en']) {
+      if (typeof value[key] === 'string' && value[key].trim() !== '') return value[key]
+    }
+    const first = Object.values(value).find((item) => typeof item === 'string' && item.trim() !== '')
+    return first ?? null
+  }
+  return null
+}
+
+/** 读某个分支上的 package.json：版本号、engines.dsh、是否声明了组合包、展示文案 */
 async function branchManifest(repo, branch) {
   const ref = branch.split('/').map(encodeURIComponent).join('/')
   try {
@@ -250,6 +263,9 @@ async function readRepoBranches(repo) {
         version: typeof manifest?.version === 'string' ? manifest.version : null,
         enginesDsh: typeof manifest?.engines?.dsh === 'string' ? manifest.engines.dsh : null,
         bundle: manifest?.dsh?.bundle !== undefined && manifest.dsh.bundle !== null,
+        title: textOf(manifest?.dsh?.meta?.title),
+        // 分支之间的描述可能不一样，装之前得看得见差别
+        description: textOf(manifest?.dsh?.meta?.description) ?? textOf(manifest?.description),
       }
     }),
   )

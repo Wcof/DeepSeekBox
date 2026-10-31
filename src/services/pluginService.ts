@@ -2,6 +2,7 @@ import type {
   InstalledBundle,
   MarketEntry,
   MarketIndexSummary,
+  MarketLabel,
   MarketVersion,
   OperationResult,
   PluginRow,
@@ -129,8 +130,16 @@ function localized(value: Localized | undefined): string | undefined {
   return value.zh ?? value.en ?? Object.values(value)[0]
 }
 
-function hasOfficialMark(metadata: RawMarketEntry['metadata']): boolean {
-  return (metadata.labels ?? []).includes('official') || (metadata.keywords ?? []).includes('official')
+/**
+ * 收录来源由索引自己声明：
+ * - labels 里的 `official` 才算 DSH 官方（本 Box 的索引不写这个标记）；
+ * - keywords 里的 `deepseekbox` 表示收录在本 Box 的索引里；
+ * - 其余索引源一律按第三方处理。
+ */
+function marketLabelOf(metadata: RawMarketEntry['metadata']): MarketLabel {
+  if ((metadata.labels ?? []).includes('official')) return 'official'
+  if ((metadata.keywords ?? []).includes('deepseekbox')) return 'catalog'
+  return 'third-party'
 }
 
 // ============ 本地组合包 ============
@@ -278,8 +287,8 @@ export async function searchIndex(
       category: entry.metadata.category,
       keywords: entry.metadata.keywords ?? [],
       labels: entry.metadata.labels ?? [],
-      // 官方/第三方以宿主的 labels 为准，本 Box 自己的索引把标记写在 keywords 里
-      label: hasOfficialMark(entry.metadata) ? 'official' : 'third-party',
+      // 来源以索引的声明为准（labels 的 official / keywords 的 deepseekbox），不猜
+      label: marketLabelOf(entry.metadata),
       defaultVersion: entry.defaultVersion ?? preferred?.version,
       versions,
       installation: entry.installation,

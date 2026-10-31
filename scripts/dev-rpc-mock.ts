@@ -115,7 +115,7 @@ export function createDevRpcMock() {
       description: { zh: '在 DeepSeek Harness 中阅读 RSS，与原生 AI 对话伴读文章。', en: 'Read RSS in Harness.' },
       author: 'joeseesun（乔木）',
       repository: { url: 'https://github.com/joeseesun/qiaomu-rss-dsh' },
-      metadata: { category: 'reading', keywords: ['乔木 RSS', 'official'], labels: [] },
+      metadata: { category: 'reading', keywords: ['乔木 RSS', 'deepseekbox'], labels: [] },
       versions: [
         {
           version: '0.9.2',
@@ -134,7 +134,7 @@ export function createDevRpcMock() {
       description: { zh: '让 Harness 成为一天的起点。', en: 'Start your day in Harness.' },
       author: 'joeseesun（乔木）',
       repository: { url: 'https://github.com/joeseesun/qiaomu-home-dsh' },
-      metadata: { category: 'productivity', keywords: ['乔木 Home', 'official'], labels: [] },
+      metadata: { category: 'productivity', keywords: ['乔木 Home', 'deepseekbox'], labels: [] },
       versions: [
         {
           version: '0.3.1',
@@ -194,6 +194,8 @@ export function createDevRpcMock() {
         version: '0.3.1',
         enginesDsh: '0.2.1-rc.2 || 0.2.1-rc.3',
         bundle: true,
+        title: '乔木 Home',
+        description: '让 Harness 成为一天的起点：会话搜索、今日重点、待办与专注计时。',
       },
       {
         name: 'codex/dsh-rc5-20261031',
@@ -201,6 +203,8 @@ export function createDevRpcMock() {
         version: '0.3.2',
         enginesDsh: '0.2.1-rc.2 || 0.2.1-rc.3 || 0.2.1-rc.4 || 0.2.1-rc.5',
         bundle: true,
+        title: '乔木 Home（rc.5 支持）',
+        description: '补齐 rc.4/rc.5 的显式支持，其余产品界面与数据格式不变。',
       },
       {
         name: 'docs/readme-only',
@@ -208,6 +212,8 @@ export function createDevRpcMock() {
         version: null,
         enginesDsh: null,
         bundle: false,
+        title: null,
+        description: null,
       },
     ],
     'joeseesun/qiaomu-rss-dsh': [
@@ -217,6 +223,8 @@ export function createDevRpcMock() {
         version: '0.9.2',
         enginesDsh: '0.2.1-rc.2 || 0.2.1-rc.3',
         bundle: true,
+        title: '乔木 RSS',
+        description: '在 DeepSeek Harness 中阅读 RSS，与原生 AI 对话伴读文章。',
       },
       {
         name: 'codex/dsh-rc5-20261031',
@@ -224,6 +232,8 @@ export function createDevRpcMock() {
         version: '0.9.3',
         enginesDsh: '0.2.1-rc.2 || 0.2.1-rc.3 || 0.2.1-rc.4 || 0.2.1-rc.5',
         bundle: true,
+        title: '乔木 RSS（rc.5 支持）',
+        description: '补齐 rc.4/rc.5 的显式支持，订阅与阅读界面不变。',
       },
     ],
   }

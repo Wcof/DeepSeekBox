@@ -65,14 +65,6 @@ const state = reactive({
   updateNoticeDismissed: false,
   busy: {} as Record<string, boolean>,
 
-  /** 按分支安装：当前挑中的插件、它所属的 GitHub 仓库、以及拉到的分支列表 */
-  branchOpen: false,
-  branchEntry: null as MarketEntry | null,
-  branchRepo: null as string | null,
-  branchStatus: 'idle' as 'idle' | 'loading' | 'ready' | 'error',
-  branchError: '',
-  branches: [] as RepoBranch[],
-
   toasts: [] as Toast[],
   confirm: null as (ConfirmOptions & { resolve: (ok: boolean) => void }) | null,
 })
@@ -523,79 +515,26 @@ async function installSpec(spec: string): Promise<boolean> {
 // ============ 按分支安装 ============
 
 /**
- * 上游不一定把修复合进主线、也不一定发版；分支是它们已经在用的活口。
- * 这里只让用户选「分支」——装的是该分支当前的头，后续提交会改变它，
- * 所以入口处要如实说明，不假装它是固定版本。
+ * 分支是上游的活口：卡片左下角的版本号点开就是分支列表，装在卡片内联完成。
+ * 装的是该分支当前的头提交——上游后续推送会改变它，所以不假装它是固定版本。
  */
-function repoSlugOf(entry: MarketEntry): string | null {
-  const url = entry.repository ?? entry.homepage ?? ''
-  const match = /github\.com\/([^/]+)\/([^/#?]+)/i.exec(url)
-  if (match === null) return null
-  return `${match[1]}/${match[2].replace(/\.git$/, '')}`
-}
-
-function resetBranchDialog(): void {
-  state.branchOpen = false
-  state.branchEntry = null
-  state.branchRepo = null
-  state.branchStatus = 'idle'
-  state.branchError = ''
-  state.branches = []
-}
-
-function branchBusy(): boolean {
-  return Object.keys(state.busy).some((key) => key.startsWith('branch-install:'))
-}
-
-async function loadBranches(): Promise<void> {
-  const repo = state.branchRepo
-  if (repo === null) return
-  state.branchStatus = 'loading'
-  state.branchError = ''
-  try {
-    state.branches = await service.listRepoBranches(repo)
-    state.branchStatus = 'ready'
-  } catch (error) {
-    state.branches = []
-    state.branchStatus = 'error'
-    state.branchError = describe(error)
-  }
-}
-
-async function openBranches(entry: MarketEntry): Promise<void> {
-  const repo = repoSlugOf(entry)
-  if (repo === null) {
-    toast('warning', '这个插件没有提供 GitHub 仓库地址，没法按分支安装')
-    return
-  }
-  state.branchEntry = entry
-  state.branchRepo = repo
-  state.branchOpen = true
-  state.branches = []
-  await loadBranches()
-}
-
-function closeBranches(): void {
-  if (branchBusy()) return
-  resetBranchDialog()
-}
-
-async function installBranch(branch: RepoBranch): Promise<void> {
-  const entry = state.branchEntry
-  const repo = state.branchRepo
-  if (entry === null || repo === null) return
+async function installBranchAt(
+  entry: MarketEntry,
+  repo: string,
+  branch: RepoBranch,
+): Promise<boolean> {
   if (!branch.bundle) {
     toast('warning', `${branch.name} 分支没有声明组合包，装进来也不能按插件管理`)
-    return
+    return false
   }
-  await withBusy(`branch-install:${repo}#${branch.name}`, async () => {
+  const done = await withBusy(`branch-install:${repo}#${branch.name}`, async () => {
     const spec = `git+https://github.com/${repo}#${branch.name}`
     try {
       const result = await service.installBundle(spec)
       const failure = resultMessage(result)
       if (failure) {
         toast('error', `安装失败：${failure}`)
-        return
+        return false
       }
       const version = branch.version ? ` v${branch.version}` : ''
       const restart = result.application === 'restart-required'
@@ -603,13 +542,26 @@ async function installBranch(branch: RepoBranch): Promise<void> {
         restart ? 'warning' : 'success',
         `已安装 ${entry.title}${version}（${branch.name} 分支）${restart ? '，重启 DSH 后生效' : ''}`,
       )
-      resetBranchDialog()
       await loadLocal()
       await loadStore()
+      return true
     } catch (error) {
       toast('error', `安装失败：${describe(error)}`)
+      return false
     }
   })
+  return done === true
+}
+
+/** 读分支列表：失败原因在这里翻成中文，卡片只负责展示 */
+async function loadRepoBranches(
+  repo: string,
+): Promise<{ ok: boolean; branches: RepoBranch[]; error?: string }> {
+  try {
+    return { ok: true, branches: await service.listRepoBranches(repo) }
+  } catch (error) {
+    return { ok: false, branches: [], error: describe(error) }
+  }
 }
 
 // ============ 详情页 ============
@@ -677,6 +629,7 @@ const storeStats = computed(() => {
   const counts: Record<StoreFilter, number> = {
     all: state.market.length,
     official: 0,
+    catalog: 0,
     'third-party': 0,
     installed: 0,
     available: 0,
@@ -714,6 +667,7 @@ const filteredLocal = computed(() => {
 function matchesStoreFilter(entry: MarketEntry): boolean {
   switch (state.storeFilter) {
     case 'official':
+    case 'catalog':
     case 'third-party':
       return entry.label === state.storeFilter
     case 'available':
@@ -864,11 +818,8 @@ export const pluginCenter = {
   openInstallDialog,
   closeInstallDialog,
 
-  openBranches,
-  closeBranches,
-  loadBranches,
-  installBranch,
-  branchBusy,
+  installBranchAt,
+  loadRepoBranches,
 
   openDetail,
   closeDetail,

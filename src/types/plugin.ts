@@ -1,7 +1,13 @@
 /** 插件管理 Tab 的来源筛选 */
 export type LocalFilter = 'all' | 'official' | 'third-party' | 'local'
 /** 插件市场 Tab 的筛选 */
-export type StoreFilter = 'all' | 'official' | 'third-party' | 'installed' | 'available'
+export type StoreFilter =
+  | 'all'
+  | 'official'
+  | 'catalog'
+  | 'third-party'
+  | 'installed'
+  | 'available'
 export type LocalSortKey = 'status' | 'name' | 'package' | 'origin'
 export type StoreSortKey = 'index' | 'name' | 'author' | 'installable'
 
@@ -30,9 +36,32 @@ export const BUNDLE_ORIGIN_TAG: Record<BundleOrigin, string> = {
   local: 'tag--gray',
 }
 
-export const MARKET_LABEL_TEXT: Record<'official' | 'third-party', string> = {
-  official: '官方收录',
+/**
+ * 收录来源：只有 DSH 官方给出的 official 标记才算「官方」，
+ * 本 Box 自己的索引只是收录（catalog），其余索引源一律算第三方。
+ */
+export type MarketLabel = 'official' | 'catalog' | 'third-party'
+
+export const MARKET_LABEL_TEXT: Record<MarketLabel, string> = {
+  official: 'DSH 官方',
+  catalog: 'DeepSeekBox 收录',
   'third-party': '第三方',
+}
+
+export const MARKET_LABEL_TAG: Record<MarketLabel, string> = {
+  official: 'tag--green',
+  catalog: 'tag--blue',
+  'third-party': 'tag--gray',
+}
+
+/** 从仓库地址里取 owner/name，只认 GitHub；拿不到就返回 null */
+export function githubRepoOf(...urls: Array<string | undefined>): string | null {
+  for (const url of urls) {
+    if (url === undefined) continue
+    const match = /github\.com\/([^/]+)\/([^/#?]+)/i.exec(url)
+    if (match !== null) return `${match[1]}/${match[2].replace(/\.git$/, '')}`
+  }
+  return null
 }
 
 /** 组合包在磁盘上的可读位置：profile 依赖、随安装附带、或已缺失 */
@@ -103,7 +132,7 @@ export interface MarketEntry {
   category?: string
   keywords: string[]
   labels: string[]
-  label: 'official' | 'third-party'
+  label: MarketLabel
   defaultVersion?: string
   versions: MarketVersion[]
   installation: {
@@ -129,6 +158,9 @@ export interface RepoBranch {
   enginesDsh?: string | null
   /** 该分支的 package.json 是否声明了 dsh.bundle */
   bundle: boolean
+  /** 分支自己的展示名与描述：不同分支可能不一样 */
+  title?: string | null
+  description?: string | null
 }
 
 /** 启停 / 删除 / 安装这类操作的统一结果 */

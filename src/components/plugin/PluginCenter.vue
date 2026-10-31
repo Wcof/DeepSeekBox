@@ -42,9 +42,10 @@ const LOCAL_CARDS = [
 ] as const
 
 const STORE_CARDS = [
-  { key: 'all', label: '收录插件', chip: '全部', icon: 'box', tint: '' },
-  { key: 'official', label: '官方收录', chip: '官方收录', icon: 'shield-check', tint: 'green' },
-  { key: 'third-party', label: '第三方收录', chip: '第三方', icon: 'users', tint: 'blue' },
+  { key: 'all', label: '全部收录', chip: '全部', icon: 'box', tint: '' },
+  { key: 'official', label: 'DSH 官方', chip: 'DSH 官方', icon: 'shield-check', tint: 'green' },
+  { key: 'catalog', label: 'DeepSeekBox 收录', chip: '收录', icon: 'inbox', tint: 'blue' },
+  { key: 'third-party', label: '第三方来源', chip: '第三方', icon: 'users', tint: 'violet' },
   { key: 'installed', label: '已安装', chip: '已安装', icon: 'circle-check', tint: 'amber' },
 ] as const
 

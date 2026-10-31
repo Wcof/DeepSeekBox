@@ -214,7 +214,8 @@ export function buildPluginCatalogIndex(): PluginCatalogIndex {
         repository: { url },
         metadata: {
           category: CATEGORY_BY_PLUGIN[plugin.id] ?? 'tools',
-          keywords: [plugin.alias, plugin.source === 'official' ? 'official' : 'third-party'],
+          // 只是「收录在本 Box 的索引里」，不等于 DSH 官方；官方的说法留给 labels 里的 official
+          keywords: [plugin.alias, 'deepseekbox'],
           labels: [],
           sortKeys: {},
         },
