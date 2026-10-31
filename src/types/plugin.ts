@@ -54,6 +54,16 @@ export const MARKET_LABEL_TAG: Record<MarketLabel, string> = {
   'third-party': 'tag--gray',
 }
 
+/** 索引里的分类键 → 展示名（与 pluginIndex 的 CATEGORIES 对应） */
+export const MARKET_CATEGORY_LABEL: Record<string, string> = {
+  reading: '阅读',
+  learning: '学习',
+  productivity: '效率',
+  ui: '界面增强',
+  tools: '工具',
+  models: '模型与供应商',
+}
+
 /** 从仓库地址里取 owner/name，只认 GitHub；拿不到就返回 null */
 export function githubRepoOf(...urls: Array<string | undefined>): string | null {
   for (const url of urls) {

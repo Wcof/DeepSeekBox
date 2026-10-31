@@ -61,6 +61,10 @@ const state = reactive({
   storeFilter: 'all' as StoreFilter,
   /** 创作者多选，空数组表示不限；命中语义为「任一」 */
   storeAuthors: [] as string[],
+  /** 分类多选（对应索引 metadata.category），空数组表示不限 */
+  storeCategories: [] as string[],
+  /** 社区目录有上千位作者，分面默认只显示前 12 位 */
+  authorFacetsExpanded: false,
   localSort: 'status' as LocalSortKey,
   storeSort: 'index' as StoreSortKey,
 
@@ -200,32 +204,48 @@ function applyUpdateFlags(): number {
 
 /** 宿主 search 单页上限 100，且必须靠 nextOffset 翻页才能拿全一个索引 */
 const MARKET_PAGE_SIZE = 100
-const MARKET_MAX_PAGES = 10
+/** 社区目录有 5,000+ 条，上限放到 60 页（6,000 条）；超出才在列表上方提示 */
+const MARKET_MAX_PAGES = 60
+/** 首页之后的翻页并发数：串行 55 页要等十几秒 */
+const MARKET_PAGE_CONCURRENCY = 6
 
 async function fetchIndexPages(
   url: string,
   refresh: boolean,
 ): Promise<{ entries: MarketEntry[]; total: number }> {
-  const entries: MarketEntry[] = []
-  let total = 0
-  let offset = 0
-  let fetchedAt: number | undefined
-  for (let page = 0; page < MARKET_MAX_PAGES; page++) {
-    const result = await service.searchIndex(url, {
-      text: state.storeQuery,
-      limit: MARKET_PAGE_SIZE,
-      offset,
-      refresh: refresh && page === 0,
-      // 同一份文档的后续页用首次读取时间固定，避免翻页时文档被换掉导致漏条或重条
-      fetchedAt: page === 0 ? undefined : fetchedAt,
-    })
-    entries.push(...result.entries)
-    total = result.total
-    fetchedAt = result.fetchedAt
-    if (result.nextOffset === null || entries.length >= total) break
-    offset = result.nextOffset
+  const query = { text: state.storeQuery, limit: MARKET_PAGE_SIZE }
+  const first = await service.searchIndex(url, { ...query, offset: 0, refresh })
+  const total = first.total
+  const fetchedAt = first.fetchedAt
+
+  // 按页号存，最后按顺序拼回去：并发请求不能打乱「索引顺序」
+  const pages: MarketEntry[][] = [first.entries]
+  const nextOffset = first.nextOffset ?? 0
+  const hasMore = first.nextOffset !== null && first.entries.length < total
+  const remaining = hasMore
+    ? Math.min(Math.ceil((total - nextOffset) / MARKET_PAGE_SIZE), MARKET_MAX_PAGES - 1)
+    : 0
+
+  if (remaining > 0) {
+    let cursor = 0
+    const fetchPage = async (): Promise<void> => {
+      while (cursor < remaining) {
+        const page = cursor++
+        const result = await service.searchIndex(url, {
+          ...query,
+          offset: nextOffset + page * MARKET_PAGE_SIZE,
+          // 同一份文档的后续页用首次读取时间固定，避免翻页时文档被换掉导致漏条或重条
+          fetchedAt,
+        })
+        pages[page + 1] = result.entries
+      }
+    }
+    await Promise.all(
+      Array.from({ length: Math.min(MARKET_PAGE_CONCURRENCY, remaining) }, fetchPage),
+    )
   }
-  return { entries, total }
+
+  return { entries: pages.flatMap((page) => page ?? []), total }
 }
 
 async function loadLocal(): Promise<void> {
@@ -721,7 +741,10 @@ const authorOf = (entry: MarketEntry): string => entry.author?.trim() || UNKNOWN
  * 创作者分面：只按来源筛选统计，因此选中某个创作者后其他档的计数不会塌成 0。
  * 每条索引条目只有一个 author，所以多选是「任一命中」，不做「同时属于多人」的交集。
  */
-const authorFacets = computed(() => {
+const AUTHOR_FACET_LIMIT = 12
+const AUTHOR_FACET_EXPANDED = 48
+
+const authorFacetAll = computed(() => {
   const counts = new Map<string, number>()
   for (const entry of state.market) {
     if (!matchesStoreFilter(entry)) continue
@@ -732,6 +755,49 @@ const authorFacets = computed(() => {
     .map(([author, count]) => ({ author, count }))
     .sort((a, b) => b.count - a.count || a.author.localeCompare(b.author, 'zh-Hans-CN'))
 })
+
+/** 几千条社区条目会带来上千位作者，分面只展示头部，其余交给搜索 */
+const authorFacets = computed(() =>
+  authorFacetAll.value.slice(
+    0,
+    state.authorFacetsExpanded ? AUTHOR_FACET_EXPANDED : AUTHOR_FACET_LIMIT,
+  ),
+)
+
+const authorFacetsHidden = computed(() =>
+  Math.max(0, authorFacetAll.value.length - authorFacets.value.length),
+)
+
+function toggleAuthorFacets(): void {
+  state.authorFacetsExpanded = !state.authorFacetsExpanded
+}
+
+/** 分类分面：计数只受来源与作者影响，选中分类后其他档不塌陷 */
+const categoryFacets = computed(() => {
+  const counts = new Map<string, number>()
+  for (const entry of state.market) {
+    if (!matchesStoreFilter(entry) || !matchesStoreAuthor(entry)) continue
+    const key = entry.category ?? ''
+    if (key === '') continue
+    counts.set(key, (counts.get(key) ?? 0) + 1)
+  }
+  return [...counts.entries()]
+    .map(([key, count]) => ({ key, count }))
+    .sort((a, b) => b.count - a.count)
+})
+
+function matchesStoreCategory(entry: MarketEntry): boolean {
+  return (
+    state.storeCategories.length === 0 ||
+    state.storeCategories.includes(entry.category ?? '')
+  )
+}
+
+function setStoreCategory(category: string): void {
+  const index = state.storeCategories.indexOf(category)
+  if (index >= 0) state.storeCategories.splice(index, 1)
+  else state.storeCategories.push(category)
+}
 
 function matchesStoreAuthor(entry: MarketEntry): boolean {
   return state.storeAuthors.length === 0 || state.storeAuthors.includes(authorOf(entry))
@@ -746,7 +812,8 @@ function setStoreAuthor(author: string): void {
 const storeGroups = computed(() => {
   const groups = new Map<string, { title: string; url: string; entries: MarketEntry[] }>()
   for (const entry of state.market) {
-    if (!matchesStoreFilter(entry) || !matchesStoreAuthor(entry)) continue
+    if (!matchesStoreFilter(entry) || !matchesStoreAuthor(entry) || !matchesStoreCategory(entry))
+      continue
     const group = groups.get(entry.indexUrl) ?? {
       title: entry.indexTitle,
       url: entry.indexUrl,
@@ -828,6 +895,7 @@ function gotoStore(): void {
   state.storeQuery = ''
   state.storeFilter = 'all'
   state.storeAuthors = []
+  state.storeCategories = []
   state.activeTab = 'store'
   void loadStore()
 }
@@ -897,7 +965,11 @@ export const pluginCenter = {
   storeStats,
   storeTruncated,
   authorFacets,
+  authorFacetsHidden,
+  toggleAuthorFacets,
   setStoreAuthor,
+  categoryFacets,
+  setStoreCategory,
   visibleStoreCount,
   setLocalFilter,
   setStoreFilter,

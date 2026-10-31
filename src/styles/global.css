@@ -628,6 +628,29 @@ button {
   white-space: nowrap;
 }
 
+/* 分面里「更多作者 / 收起」这类辅助按钮：虚线描边，视觉上退一层 */
+.chip--ghost {
+  border-style: dashed;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.chip--ghost:hover {
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+}
+
+/* 大列表提示：几千条时告诉用户优先搜索 */
+.store-hint {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px dashed var(--color-border);
+  border-radius: 10px;
+  background: #ffffff;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
 /* 创作者分面：跟随来源筛选，独占一行 */
 .facets {
   flex-basis: 100%;

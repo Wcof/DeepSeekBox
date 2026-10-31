@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { pluginCenter } from '../../stores/pluginCenter'
+import { MARKET_CATEGORY_LABEL } from '../../types/plugin'
 import type { LocalFilter, StoreFilter } from '../../types/plugin'
 import AppIcon from '../icons/AppIcon.vue'
 import LocalPluginCard from './LocalPluginCard.vue'
@@ -13,7 +14,11 @@ const {
   storeStats,
   storeTruncated,
   authorFacets,
+  authorFacetsHidden,
+  toggleAuthorFacets,
   setStoreAuthor,
+  categoryFacets,
+  setStoreCategory,
   visibleStoreCount,
   filteredLocal,
   renderedStoreGroups,
@@ -112,6 +117,7 @@ function clearStoreFilters(): void {
   state.storeQuery = ''
   state.storeFilter = 'all'
   state.storeAuthors = []
+  state.storeCategories = []
   void loadStore()
 }
 
@@ -422,7 +428,49 @@ function hostOf(url: string): string {
             <span class="chip__label">{{ facet.author }}</span>
             <span class="chip__count">{{ facet.count }}</span>
           </button>
+          <button
+            v-if="authorFacetsHidden > 0"
+            type="button"
+            class="chip chip--ghost"
+            :title="`还有 ${authorFacetsHidden} 位作者，点开显示更多；找特定作者用搜索更快`"
+            @click="toggleAuthorFacets()"
+          >
+            更多作者 +{{ authorFacetsHidden }}
+          </button>
+          <button
+            v-else-if="state.authorFacetsExpanded"
+            type="button"
+            class="chip chip--ghost"
+            @click="toggleAuthorFacets()"
+          >
+            收起作者
+          </button>
           <span v-if="state.storeAuthors.length > 1" class="facets__hint">多选取任一命中</span>
+        </div>
+
+        <div v-if="categoryFacets.length > 1" class="facets">
+          <span class="facets__label">分类</span>
+          <button
+            type="button"
+            class="chip"
+            :class="{ 'chip--active': state.storeCategories.length === 0 }"
+            @click="state.storeCategories = []"
+          >
+            全部
+          </button>
+          <button
+            v-for="facet in categoryFacets"
+            :key="facet.key"
+            type="button"
+            class="chip"
+            :class="{ 'chip--active': state.storeCategories.includes(facet.key) }"
+            :aria-pressed="state.storeCategories.includes(facet.key)"
+            @click="setStoreCategory(facet.key)"
+          >
+            <span class="chip__label">{{ MARKET_CATEGORY_LABEL[facet.key] ?? facet.key }}</span>
+            <span class="chip__count">{{ facet.count }}</span>
+          </button>
+          <span v-if="state.storeCategories.length > 1" class="facets__hint">多选取任一命中</span>
         </div>
 
         <div class="filters__tail">
@@ -528,6 +576,10 @@ function hostOf(url: string): string {
         <p v-if="storeTruncated" class="index-errors__item" role="status">
           <AppIcon name="alert-circle" :size="16" />
           <span>索引共 {{ storeTruncated }} 个插件，已加载 {{ state.market.length }} 个（达到单次翻页上限）</span>
+        </p>
+
+        <p v-if="state.market.length > 500" class="store-hint">
+          已加载 {{ state.market.length }} 个条目：按名称、作者或关键词搜索比翻页快；列表按批渲染，点「显示更多」继续。
         </p>
 
         <section v-for="group in renderedStoreGroups" :key="group.url" class="store-group">

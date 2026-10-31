@@ -9,7 +9,7 @@ withDefaults(defineProps<{ icon?: string; size?: number; muted?: boolean }>(), {
 
 <template>
   <div class="plugin-card__tile" :class="{ 'plugin-card__tile--muted': muted }">
-    <img v-if="icon" :src="icon" alt="" class="plugin-tile__img" />
+    <img v-if="icon" :src="icon" alt="" class="plugin-tile__img" loading="lazy" decoding="async" />
     <AppIcon v-else name="puzzle" :size="size" />
   </div>
 </template>

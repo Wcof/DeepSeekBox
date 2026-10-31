@@ -126,7 +126,7 @@ jsDelivr 长时间不更新时，访问 `https://purge.jsdelivr.net/gh/Wcof/Deep
 
 - `https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/community.json`
 
-订阅方式二选一：在 DSH「发现 → Index sources」里加上面这条地址；或打开插件中心的「插件市场」，点工具栏的「社区目录」按钮一键订阅。条目较多（数千条），搜索比逐页翻更高效；列表按批渲染，点「显示更多」继续加载。
+订阅方式二选一：在 DSH「发现 → Index sources」里加上面这条地址；或打开插件中心的「插件市场」，点工具栏的「社区目录」按钮一键订阅。条目较多（数千条），搜索比逐页翻更高效；列表支持按来源、分类、作者筛选，按批渲染，点「显示更多」继续加载。
 
 社区目录里的条目只代表「这个仓库确实是一个 DSH 组合包」，不代表我们验证过它的行为或兼容性；能否安装仍以宿主按 `engines.dsh` 的判断为准。
 

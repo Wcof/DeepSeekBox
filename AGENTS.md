@@ -37,6 +37,7 @@ DeepSeek Harness 桌面端 APP 的前端工程，当前包含插件中心（安�
 - 分支入口在卡片左下角的版本号上（不是弹窗）：点开是内联下拉，列分支、版本、要求范围、描述，逐行安装。安装分支走 `installBundle` 的 git spec（`git+https://github.com/<repo>#<分支>`），**不登记进索引**：索引只收录发布版本，分支是活口，随时会被上游重写。
 - 索引分两份：`index.json`（精选，人工收录）与 `community.json`（社区目录，从 dsh-plugin.org 同步）。社区条目只做**仓库级核实**——`git ls-remote` 能读到 HEAD、该提交的 package.json 声明 `dsh.bundle`、版本是 semver；字段一律取自仓库本身，不采信第三方目录的版本号。面板工具栏的「社区目录」按钮调 `setIndexes` 把 `community.json` 加进订阅，精选索引不掺沙子。
 - 市场列表按 `storeRenderLimit`（默认 120）分批渲染，避免社区目录几千条一次塞进 DOM；搜索与筛选会重置上限。搜索结果仍然走宿主，能覆盖全部条目。
+- 大索引取数：`fetchIndexPages` 首页同步取，其余页按 `MARKET_PAGE_CONCURRENCY=6` 并发拉取，页号保序拼回（并发不能打乱「索引顺序」）；`MARKET_MAX_PAGES=60`，社区目录 5,413 条可整份读入。分面：创作者只显示前 12 位（可展开到 48），分类单独一行且计数不受分类自身筛选影响——几千条时这两处是主要噪音源。
 - 安全：只接受 POST + 同源（`sec-fetch-site` 非 `cross-site`，`origin` 主机须与 `host` 一致），请求体上限 512 KiB。
 - 配置项编辑不在远程面里（只有模型侧 `Config.listConfigs`），所以详情页只做包信息与逐行启停，不提供配置表单。
 
