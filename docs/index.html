@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DeepSeekBox — DeepSeek Harness 插件中心与插件索引源</title>
+    <meta
+      name="description"
+      content="DeepSeekBox 是 DeepSeek Harness（DSH）的插件中心：安装、更新、启停 DSH 插件，聚合插件索引源，标出版本不兼容的插件，并支持按分支安装。同时发布可订阅的 format 1 插件索引。"
+    />
+    <link rel="canonical" href="https://wcof.github.io/DeepSeekBox/" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="DeepSeekBox — DeepSeek Harness 插件中心" />
+    <meta
+      property="og:description"
+      content="在 DeepSeek Harness 里安装、更新、启停插件，聚合多个插件索引源，标出不兼容版本，并支持按分支安装。"
+    />
+    <meta property="og:url" content="https://wcof.github.io/DeepSeekBox/" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "SoftwareApplication",
+            "name": "DeepSeekBox",
+            "alternateName": ["DeepSeekBox 插件中心", "DSH 插件中心"],
+            "applicationCategory": "DeveloperApplication",
+            "operatingSystem": "macOS",
+            "softwareVersion": "0.4.3",
+            "url": "https://wcof.github.io/DeepSeekBox/",
+            "downloadUrl": "https://github.com/Wcof/DeepSeekBox",
+            "codeRepository": "https://github.com/Wcof/DeepSeekBox",
+            "license": "https://opensource.org/licenses/MIT",
+            "description": "DeepSeek Harness（DSH）的插件中心：安装、更新与启停 DSH 插件，聚合插件索引源，标记版本不兼容，并支持按分支安装；同时发布可订阅的插件索引。",
+            "author": { "@type": "Person", "name": "Wcof", "url": "https://github.com/Wcof" },
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CNY" }
+          },
+          {
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "DeepSeek Harness 插件在哪里安装？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "两种方式：在 DeepSeek Harness 的「发现 → Index sources」添加 DeepSeekBox 的索引地址，搜索插件名后点安装；或在终端执行 dsh plugin --profile web add <包名或 git 地址>。装完需要重启窗口，因为插件的 Host 端代码在启动时加载。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "插件显示「版本不符」是什么意思？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "该版本的 package.json 里 engines.dsh 声明的 DSH 版本范围不包含你当前运行的版本。DSH 会用 semver 在安装后校验，不满足就拒绝并回滚；DeepSeekBox 把这个判断提前到列表里，直接禁用安装并写出要求的版本范围。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "按分支安装和普通安装有什么区别？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "普通安装装的是索引里登记的固定提交；按分支安装装的是该分支当前的头提交，会随上游推送变化。它适合上游把修复合在分支上但还没发版的场景，代价是版本不固定、且未经上游验收。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "「DeepSeekBox 收录」是 DSH 官方收录吗？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "不是。它只表示该插件被 DeepSeekBox 维护的索引收录，属于本项目的整理；DSH 官方收录在索引里另有 official 标记，两者在界面上用不同标签区分。"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+    <style>
+      :root {
+        --text: #111827;
+        --body: #374151;
+        --muted: #6b7280;
+        --border: #e5e7eb;
+        --soft: #f4f5f7;
+        --amber: #b45309;
+        --green: #059669;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+        color: var(--body);
+        background: var(--soft);
+        line-height: 1.7;
+        -webkit-font-smoothing: antialiased;
+      }
+      a { color: var(--text); }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.9em;
+        background: #eef0f3;
+        padding: 1px 6px;
+        border-radius: 6px;
+      }
+      pre {
+        margin: 12px 0 0;
+        padding: 14px 16px;
+        background: #111827;
+        color: #f9fafb;
+        border-radius: 12px;
+        overflow-x: auto;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      pre code { background: none; padding: 0; color: inherit; }
+      .wrap { max-width: 880px; margin: 0 auto; padding: 56px 24px 72px; }
+      header { margin-bottom: 40px; }
+      .eyebrow { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+      h1 { margin: 10px 0 14px; font-size: 34px; line-height: 1.3; color: var(--text); letter-spacing: -0.01em; }
+      .lead { margin: 0; font-size: 17px; }
+      .meta { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; }
+      .chip { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border); background: #fff; color: var(--muted); }
+      section { margin-top: 44px; }
+      h2 { margin: 0 0 14px; font-size: 21px; color: var(--text); }
+      h3 { margin: 22px 0 6px; font-size: 16px; color: var(--text); }
+      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+      .card { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+      .card h3 { margin: 0 0 6px; font-size: 15px; }
+      .card p { margin: 0; font-size: 14px; color: var(--muted); }
+      ol, ul { padding-left: 20px; }
+      li { margin: 6px 0; }
+      table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; background: #fff; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+      th, td { padding: 10px 12px; border-top: 1px solid var(--border); text-align: left; vertical-align: top; }
+      th { background: #fafafa; font-weight: 600; color: var(--text); }
+      tr:first-child th { border-top: 0; }
+      .faq { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 6px 20px; }
+      .faq details { border-top: 1px solid var(--border); padding: 14px 0; }
+      .faq details:first-child { border-top: 0; }
+      .faq summary { cursor: pointer; font-weight: 600; color: var(--text); }
+      .faq p { margin: 8px 0 0; font-size: 14px; color: var(--muted); }
+      footer { margin-top: 52px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+      .links a { margin-right: 16px; }
+      @media (max-width: 620px) {
+        .wrap { padding: 36px 18px 56px; }
+        h1 { font-size: 27px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div class="eyebrow">DeepSeek Harness · Plugin Center</div>
+        <h1>DeepSeekBox：DeepSeek Harness 插件中心</h1>
+        <p class="lead">
+          DeepSeekBox 是 DeepSeek Harness（DSH）桌面端的插件中心：在一个面板里浏览、安装、更新、启用或停用插件，聚合多个插件索引源，把装不上的版本提前标出来；上游只把修复合在分支上时，可以直接按分支安装。它本身也是一个可安装的 DSH 组合包，并对外发布一份可供订阅的插件索引。
+        </p>
+        <div class="meta">
+          <span class="chip">MIT 许可</span>
+          <span class="chip">DSH 0.2.1-rc.5 验证</span>
+          <span class="chip">format 1 插件索引</span>
+          <span class="chip">macOS</span>
+        </div>
+      </header>
+
+      <section>
+        <h2>它能做什么</h2>
+        <div class="cards">
+          <div class="card">
+            <h3>插件管理与市场</h3>
+            <p>读取宿主真实的 pluginManager / pluginMarket 服务，整包启停、逐行启停、安装、更新、卸载都落在当前 profile。</p>
+          </div>
+          <div class="card">
+            <h3>多索引源聚合</h3>
+            <p>把已订阅的索引合并成一个列表，按来源分组、按作者筛选，并显示每个索引源的条数与错误。</p>
+          </div>
+          <div class="card">
+            <h3>兼容性提前可见</h3>
+            <p>按索引登记的 engines.dsh 判断：当前 DSH 装不上的版本标「版本不符」并禁用安装，而不是装到一半回滚。</p>
+          </div>
+          <div class="card">
+            <h3>按分支安装</h3>
+            <p>点卡片左下角的版本号，选仓库分支直接安装。适合上游把修复放在分支上、还没发版的场景。</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>安装</h2>
+        <h3>方式一：从插件索引安装（推荐）</h3>
+        <ol>
+          <li>打开 DeepSeek Harness 的「发现 → Index sources」，添加 <code>https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json</code></li>
+          <li>搜索「插件中心」或 <code>deepseek-box</code>，点安装</li>
+          <li>重启 DSH 窗口（Host 端代码在启动时加载）</li>
+        </ol>
+        <h3>方式二：命令行</h3>
+        <pre><code>dsh plugin --profile web add github:Wcof/DeepSeekBox</code></pre>
+        <p>桌面端把 <code>--profile web</code> 换成实际的 profile 名（通常是 <code>desktop</code>）。</p>
+      </section>
+
+      <section>
+        <h2>插件索引源</h2>
+        <p>索引遵循 DSH 的 <code>format: 1</code>，任何 DSH 实例都可以订阅：</p>
+        <table>
+          <thead>
+            <tr><th>地址</th><th>说明</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json</code></td>
+              <td>始终最新，推荐</td>
+            </tr>
+            <tr>
+              <td><code>https://cdn.jsdelivr.net/gh/Wcof/DeepSeekBox@main/index.json</code></td>
+              <td>CDN 镜像，缓存约 12 小时</td>
+            </tr>
+            <tr>
+              <td><code>https://cdn.jsdelivr.net/gh/Wcof/DeepSeekBox@&lt;commit-sha&gt;/index.json</code></td>
+              <td>按提交固定，内容不变</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>索引里每个版本都登记了 <code>source: { type: "git", url, commit }</code> 与 <code>engines.dsh</code>；后者原样取自该提交的 <code>package.json</code>。</p>
+      </section>
+
+      <section>
+        <h2>收录与来源标签</h2>
+        <table>
+          <thead>
+            <tr><th>标签</th><th>含义</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>DSH 官方</td><td>DSH 官方维护或收录，索引里带 <code>official</code> 标记</td></tr>
+            <tr><td>DeepSeekBox 收录</td><td>收录在本项目的索引里，属于本项目的整理，不代表官方背书</td></tr>
+            <tr><td>第三方</td><td>来自其他订阅的索引源</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>常见问题</h2>
+        <div class="faq">
+          <details>
+            <summary>DeepSeek Harness 插件在哪里安装？</summary>
+            <p>在「发现 → Index sources」添加索引地址后搜索安装，或在终端执行 <code>dsh plugin --profile web add &lt;包名或 git 地址&gt;</code>。装完需要重启窗口。</p>
+          </details>
+          <details>
+            <summary>插件显示「版本不符」是什么意思？</summary>
+            <p>该版本的 <code>engines.dsh</code> 不包含你当前的 DSH 版本。宿主安装后会按 semver 校验并拒绝回滚；DeepSeekBox 把这个判断提前到列表里。</p>
+          </details>
+          <details>
+            <summary>按分支安装和普通安装有什么区别？</summary>
+            <p>普通安装装固定提交；分支安装装分支当前的头提交，会随上游推送变化，适合还没发版的修复。</p>
+          </details>
+          <details>
+            <summary>「DeepSeekBox 收录」是 DSH 官方收录吗？</summary>
+            <p>不是。它只表示收录在本项目的索引里；官方收录另有 <code>official</code> 标记。</p>
+          </details>
+        </div>
+      </section>
+
+      <section>
+        <h2>English</h2>
+        <p>
+          DeepSeekBox is a plugin center for DeepSeek Harness (DSH): install, update and enable DSH plugins, aggregate multiple plugin index sources, flag versions the running DSH cannot load, and install from a git branch when upstream has not published a release. It is itself an installable DSH bundle and publishes a <code>format: 1</code> plugin index that any DSH instance can subscribe to.
+        </p>
+        <pre><code>dsh plugin --profile web add github:Wcof/DeepSeekBox</code></pre>
+      </section>
+
+      <footer>
+        <div class="links">
+          <a href="https://github.com/Wcof/DeepSeekBox">GitHub 仓库</a>
+          <a href="https://github.com/Wcof/DeepSeekBox/blob/main/README.md">中文文档</a>
+          <a href="https://github.com/Wcof/DeepSeekBox/blob/main/README.en.md">English docs</a>
+          <a href="https://github.com/Wcof/DeepSeekBox/releases">Releases</a>
+        </div>
+        <p>MIT License · 本项目与 DeepSeek 官方无隶属关系。</p>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -10,6 +10,7 @@ DeepSeekBox is itself an installable DSH bundle, and it publishes a `format: 1` 
 - Package / panel name: `deepseek-box` / Plugin Center
 - License: MIT
 - Index URL: `https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json`
+- Landing page: <https://wcof.github.io/DeepSeekBox/>
 
 If you are looking for "where do I install DeepSeek Harness plugins" or "does DSH have a plugin marketplace", this is that layer. The plugin list comes from the host's real `pluginManager` / `pluginMarket` services — there is no second copy of the data.
 
@@ -54,10 +55,10 @@ In the plugin center's **Install plugin** dialog, enter either:
 - `github:Wcof/DeepSeekBox`
 - `git+https://github.com/Wcof/DeepSeekBox#<commit-sha>` (pinned to a commit, useful for reproducing issues)
 
-Or from the DSH CLI:
+Or from the DSH CLI (`--profile` takes your profile name; desktop is usually `desktop`):
 
 ```bash
-dsh plugin add github:Wcof/DeepSeekBox
+dsh plugin --profile web add github:Wcof/DeepSeekBox
 ```
 
 ### 3. From a local directory (development)

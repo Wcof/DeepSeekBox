@@ -8,8 +8,9 @@
 - 包名 / 面板名：`deepseek-box` / 插件中心（Plugin Center）
 - 许可证：MIT
 - 索引源：`https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json`
+- 在线介绍页：<https://wcof.github.io/DeepSeekBox/>
 
-最短安装路径：在 DSH「发现 → Index sources」加上面那条索引地址，搜索「插件中心」安装，重启窗口；或在命令行执行 `dsh plugin add github:Wcof/DeepSeekBox`。
+最短安装路径：在 DSH「发现 → Index sources」加上面那条索引地址，搜索「插件中心」安装，重启窗口；或在命令行执行 `dsh plugin --profile web add github:Wcof/DeepSeekBox`。
 
 如果你在找「DeepSeek Harness 插件在哪里装」「DSH 有没有插件市场」，这个项目提供的就是那层界面：插件列表来自宿主真实的 `pluginManager` / `pluginMarket` 服务，不维护第二份数据。
 
@@ -54,10 +55,10 @@ DeepSeekBox 是标准 DSH 组合包（`package.json` 声明 `dsh.bundle.patch`�
 - `github:Wcof/DeepSeekBox`
 - `git+https://github.com/Wcof/DeepSeekBox#<commit-sha>`（钉到某个提交，适合复现问题）
 
-或在命令行执行：
+或在命令行执行（`--profile` 换成你实际的 profile 名，桌面端通常是 `desktop`）：
 
 ```bash
-dsh plugin add github:Wcof/DeepSeekBox
+dsh plugin --profile web add github:Wcof/DeepSeekBox
 ```
 
 ### 方式三：本地目录安装（开发用）
@@ -191,6 +192,8 @@ index.json          对外发布的插件索引（构建时生成）
 - [AGENTS.md](AGENTS.md)：工程结构、职责边界、红线与验证入口
 - [ROADMAP.md](ROADMAP.md)：当前进度与历史记录
 - [goals/](goals/)：施工记录
+- [docs/index.html](docs/index.html)：GitHub Pages 介绍页（含 SoftwareApplication / FAQPage 结构化数据）
+- [docs/article-dsh-plugin-incompatible.md](docs/article-dsh-plugin-incompatible.md)：插件「版本不符」的排查长文
 
 ## English
 
