@@ -120,6 +120,16 @@ dsh plugin --profile web add github:Wcof/DeepSeekBox
 
 jsDelivr 长时间不更新时，访问 `https://purge.jsdelivr.net/gh/Wcof/DeepSeekBox@main/index.json` 手动刷新。
 
+### 社区目录（全量）
+
+除了上面这份人工精选的索引，仓库还发布一份**社区目录**：从 [dsh-plugin.org](https://dsh-plugin.org) 同步的社区插件，逐条做过仓库级核实——仓库可达、该提交的 `package.json` 声明 `dsh.bundle`、版本号取自包本身。它解决的是「精选只有十几条，翻不到想要的那个」的问题：
+
+- `https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/community.json`
+
+订阅方式二选一：在 DSH「发现 → Index sources」里加上面这条地址；或打开插件中心的「插件市场」，点工具栏的「社区目录」按钮一键订阅。条目较多（数千条），搜索比逐页翻更高效；列表按批渲染，点「显示更多」继续加载。
+
+社区目录里的条目只代表「这个仓库确实是一个 DSH 组合包」，不代表我们验证过它的行为或兼容性；能否安装仍以宿主按 `engines.dsh` 的判断为准。
+
 ## 兼容性与边界
 
 - 验收环境：DSH `0.2.1-rc.5`（npm `latest`）。宿主升级后建议重跑 `npm run check:engines` 核对索引。

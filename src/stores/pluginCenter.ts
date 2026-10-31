@@ -31,6 +31,12 @@ interface ConfirmOptions {
 const SELF_INDEX_URL = 'https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json'
 
 /**
+ * 社区目录：从 dsh-plugin.org 同步的 5,000+ 条，逐条做过仓库级核实。
+ * 单独发布、单独订阅——精选索引不掺沙子，需要全量的用户点一下就有。
+ */
+const COMMUNITY_INDEX_URL = 'https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/community.json'
+
+/**
  * 插件中心唯一状态 owner：所有数据来自 DSH 宿主的 pluginManager / pluginMarket，
  * UI 只读 state 并调用 action，不持有任何本地副本。
  */
@@ -63,6 +69,8 @@ const state = reactive({
   installOpen: false,
   /** 启动时静默检查出可更新后，用户点过「稍后」就收起提示条 */
   updateNoticeDismissed: false,
+  /** 市场列表一次渲染多少条：社区目录有几千条，全渲染会卡住页面 */
+  storeRenderLimit: 120,
   busy: {} as Record<string, boolean>,
 
   toasts: [] as Toast[],
@@ -236,6 +244,7 @@ async function loadLocal(): Promise<void> {
 }
 
 async function loadStore(refresh = false): Promise<void> {
+  resetStoreRenderLimit()
   state.storeStatus = 'loading'
   state.indexErrors = {}
   state.indexTotals = {}
@@ -304,6 +313,24 @@ async function subscribeSelfIndex(): Promise<void> {
       }
       await service.setIndexes([...indexes.map((index) => index.url), SELF_INDEX_URL])
       toast('success', '已订阅 DeepSeekBox 索引源')
+      await loadStore(true)
+    } catch (error) {
+      toast('error', `订阅失败：${describe(error)}`)
+    }
+  })
+}
+
+/** 订阅本 Box 的社区目录（条目多，订阅后首次加载会慢一些） */
+async function subscribeCommunityIndex(): Promise<void> {
+  await withBusy('subscribe', async () => {
+    try {
+      const indexes = await service.listIndexes()
+      if (indexes.some((index) => index.url === COMMUNITY_INDEX_URL)) {
+        toast('info', '已经订阅过社区目录')
+        return
+      }
+      await service.setIndexes([...indexes.map((index) => index.url), COMMUNITY_INDEX_URL])
+      toast('success', '已订阅社区目录：条目较多，搜索比翻列表快')
       await loadStore(true)
     } catch (error) {
       toast('error', `订阅失败：${describe(error)}`)
@@ -744,6 +771,29 @@ const visibleStoreCount = computed(() =>
   storeGroups.value.reduce((sum, group) => sum + group.entries.length, 0),
 )
 
+/** 按预算切片渲染，避免一次把几千张卡片塞进 DOM；搜索或筛选变化时重置 */
+const renderedStoreGroups = computed(() => {
+  let budget = state.storeRenderLimit
+  const groups: Array<{ title: string; url: string; entries: MarketEntry[]; total: number }> = []
+  for (const group of storeGroups.value) {
+    if (budget <= 0) break
+    const entries = group.entries.slice(0, budget)
+    budget -= entries.length
+    groups.push({ ...group, entries, total: group.entries.length })
+  }
+  return groups
+})
+
+const storeHasMore = computed(() => visibleStoreCount.value > state.storeRenderLimit)
+
+function showMoreStore(): void {
+  state.storeRenderLimit += 120
+}
+
+function resetStoreRenderLimit(): void {
+  state.storeRenderLimit = 120
+}
+
 /** 统计卡与 chips 共用：再次点击已选中的分类回到全部 */
 function setLocalFilter(value: LocalFilter): void {
   state.localFilter = state.localFilter === value && value !== 'all' ? 'all' : value
@@ -805,6 +855,7 @@ export const pluginCenter = {
   loadStore,
   scheduleStoreSearch,
   subscribeSelfIndex,
+  subscribeCommunityIndex,
 
   checkUpdates,
   updateOne,
@@ -835,6 +886,9 @@ export const pluginCenter = {
 
   filteredLocal,
   storeGroups,
+  renderedStoreGroups,
+  storeHasMore,
+  showMoreStore,
   updateCount,
   detailBundle,
 

@@ -1,7 +1,7 @@
 {
   "name": "deepseek-box",
   "private": true,
-  "version": "0.4.3",
+  "version": "0.5.0",
   "type": "module",
   "description": "DeepSeek Harness 插件中心：安装、更新与管理 DSH 插件，聚合插件索引源，并发布可订阅的 DSH 插件索引。",
   "keywords": [
@@ -49,10 +49,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "postbuild": "cp web/index.json index.json && node scripts/sync-self-entry.mjs && node scripts/validate-index.mjs && node scripts/validate-bundle.mjs",
+    "postbuild": "cp web/index.json index.json && cp web/community.json community.json && node scripts/sync-self-entry.mjs && node scripts/validate-index.mjs index.json && node scripts/validate-index.mjs community.json && node scripts/validate-bundle.mjs",
     "validate:index": "node scripts/validate-index.mjs",
     "validate:bundle": "node scripts/validate-bundle.mjs",
     "check:engines": "node scripts/check-engines.mjs",
+    "community:scan": "node scripts/scan-dshhub.mjs --all",
+    "community:build": "node scripts/build-community.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

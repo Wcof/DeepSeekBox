@@ -12,6 +12,9 @@ interface Bilingual {
   zh: string
 }
 
+/** 索引里的展示文案既可以是单语字符串，也可以是 { en, zh } 映射 */
+type Localized = Bilingual | string
+
 interface IndexCategory {
   title: Bilingual
 }
@@ -26,8 +29,8 @@ interface IndexVersion {
 
 interface IndexPlugin {
   name: string
-  title: Bilingual
-  description: Bilingual
+  title: Localized
+  description: Localized
   author?: string
   icon?: string
   homepage: string
@@ -190,8 +193,80 @@ const VERSION_SOURCES: Record<
   }, // v0.1.0，未发 Release；取 package.json 最后变更提交 · 2026-10-30T14:50:02Z
 }
 
-/** 生成 DSH 插件索引（format 1）；收录库更新后索引随之更新 */
-export function buildPluginCatalogIndex(): PluginCatalogIndex {
+/**
+ * 社区目录条目：由 `scripts/scan-dshhub.mjs` 体检 + `scripts/build-community.mjs` 生成，
+ * 存在 `data/community/entries.json`，不进前端包，也不进精选索引。
+ * 每条都核实过仓库可达、package.json 声明 dsh.bundle、版本为 semver；
+ * 但 engines.dsh 仍以包自己的声明为准（没声明就省略，语义是「任意版本」）。
+ */
+export interface CommunityEntry {
+  id: string
+  repo: string
+  version: string
+  commit: string
+  enginesDsh: string | null
+  license: string | null
+  category: string
+  stars: number
+  updated: number
+  descriptionZh: string
+  descriptionEn: string
+}
+
+/** 社区目录索引：与精选索引同格式，单独发布，供需要「全量」的用户订阅 */
+export function buildCommunityIndex(entries: CommunityEntry[]): PluginCatalogIndex {
+  const plugins = entries.map((entry): IndexPlugin => {
+    const url = `https://github.com/${entry.repo}`
+    const owner = entry.repo.split('/')[0]
+    const description = entry.descriptionZh || entry.descriptionEn || `${entry.id}（社区插件）`
+    // 英文文案与中文相同时只写一份字符串，避免索引里重复几千条同样的文本
+    const localizedDescription =
+      entry.descriptionEn && entry.descriptionEn !== description
+        ? { zh: description, en: entry.descriptionEn }
+        : description
+    return {
+      name: entry.id,
+      title: entry.id,
+      description: localizedDescription,
+      author: owner,
+      icon: `https://github.com/${owner}.png`,
+      homepage: url,
+      repository: { url },
+      metadata: {
+        category: entry.category,
+        // deepseekbox 让面板显示「DeepSeekBox 收录」；dshhub 标出条目来自社区目录同步
+        keywords: ['deepseekbox', 'dshhub'],
+        labels: [],
+        sortKeys: {},
+      },
+      versions: [
+        {
+          version: entry.version,
+          publishTimestamp: Math.floor(entry.updated / 1000),
+          source: { type: 'git', url, commit: entry.commit },
+          engines: entry.enginesDsh === null ? {} : { dsh: entry.enginesDsh },
+        },
+      ],
+    }
+  })
+
+  return {
+    format: 1,
+    title: { en: 'DeepSeekBox Community Catalog', zh: 'DeepSeekBox 社区插件目录' },
+    description: {
+      en: 'Community DSH plugins mirrored from dsh-plugin.org with repo-level verification: the repository is reachable, its package.json declares dsh.bundle, and the version is a real release.',
+      zh: '从 dsh-plugin.org 同步的社区 DSH 插件，逐条做过仓库级核实：仓库可达、package.json 声明 dsh.bundle、版本号来自包本身。',
+    },
+    metadata: {
+      categories: CATEGORIES,
+      labels: {},
+      sortKeys: {},
+    },
+    plugins,
+  }
+}
+
+/** 生成 DSH 插件索引（format 1）；收录库更新后索引随之更新 */export function buildPluginCatalogIndex(): PluginCatalogIndex {
   const plugins = [...OFFICIAL_REGISTRY, ...THIRD_PARTY_REGISTRY].flatMap((group) =>
     group.plugins.map((plugin): IndexPlugin => {
       const versionSource = VERSION_SOURCES[plugin.id]

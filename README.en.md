@@ -118,6 +118,16 @@ The index is generated from `src/data/catalog.ts` by `src/data/pluginIndex.ts`; 
 
 If jsDelivr lags, purge it: `https://purge.jsdelivr.net/gh/Wcof/DeepSeekBox@main/index.json`.
 
+### Community catalog (full list)
+
+The curated index only carries hand-picked entries. The repository also publishes a **community catalog** synced from [dsh-plugin.org](https://dsh-plugin.org), where every entry was verified at repository level: the repo is reachable, its `package.json` at that commit declares `dsh.bundle`, and the version comes from the package itself.
+
+- `https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/community.json`
+
+Subscribe from DSH's Discover → Index sources, or click **Community catalog** in the plugin center's market toolbar. With thousands of entries, search beats paging; the list renders in batches with a **Show more** button.
+
+Being listed there means "this repository really is a DSH bundle" — not that its behaviour or compatibility was tested. The host still decides installability by `engines.dsh`.
+
 ## Compatibility and limits
 
 - Verified against DSH `0.2.1-rc.5` (npm `latest`). After a host upgrade, run `npm run check:engines` to re-check the index.

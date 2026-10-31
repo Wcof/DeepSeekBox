@@ -11,8 +11,9 @@ DeepSeek Harness 桌面端 APP 的前端工程，当前包含插件中心（安�
 - `web/` —— 插件前端的构建产物，随仓库提交（DSH 从 git 安装时不执行构建，缺了会 503）。
 - `src/types/plugin.ts` —— 插件领域类型与纯函数（版本比较、作者展示），不依赖 UI；`InstalledBundle` / `MarketEntry` 对应宿主返回结构。
 - `src/data/catalog.ts` —— 索引源（`index.json`）的收录库，按创作者划分；只服务对外发布的索引，不参与运行时。
-- `src/data/pluginIndex.ts` —— 插件市场索引源生成器：从收录库生成 DSH 插件索引（format 1，含 author / 双语 title / 项目图标 / 版本来源），供「发现」页订阅。
-- `scripts/` —— `validate-index.mjs`（官方校验器验证 index.json）、`validate-bundle.mjs`（组合包自检：dsh.bundle / patch / 入口 / locale / web 产物）、`sync-self-entry.mjs`（postbuild 同步插件中心自身条目到当前 main 提交，同时写根目录与 `web/index.json`）、`dev-rpc-mock.ts`（仅 dev 的假宿主，不进构建产物）。
+- `src/data/pluginIndex.ts` —— 插件市场索引源生成器：从收录库生成 DSH 插件索引（format 1，含 author / 双语 title / 项目图标 / 版本来源），供「发现」页订阅；同文件还导出 `buildCommunityIndex()`，把社区目录体检结果生成第二份索引。
+- `data/community/entries.json` —— 社区目录数据（从 dsh-plugin.org 同步，逐条做过仓库级核实），由 `scripts/scan-dshhub.mjs` 体检 + `scripts/build-community.mjs` 生成，只供 Node 侧生成索引用，不进前端包。
+- `scripts/` —— `validate-index.mjs`（官方校验器验证索引，可传文件名）、`validate-bundle.mjs`（组合包自检）、`sync-self-entry.mjs`（postbuild 同步自身条目）、`scan-dshhub.mjs`（`npm run community:scan`，按仓库真实情况体检社区目录）、`build-community.mjs`（`npm run community:build`，生成 entries.json）、`dev-rpc-mock.ts`（仅 dev 的假宿主）。
 - `icons/` —— 本仓库自有插件（插件中心）的图标文件，索引以绝对 raw URL 引用。
 - `src/services/pluginService.ts` —— 真实内核接口层：POST `/deepseekbox/api/rpc`，方法名与 Host 半边一一对应；不做本地缓存。
 - `src/stores/pluginCenter.ts` —— 插件中心唯一状态 owner（列表、搜索、筛选、busy、通知、确认弹窗），每次操作后回读宿主。
@@ -34,6 +35,8 @@ DeepSeek Harness 桌面端 APP 的前端工程，当前包含插件中心（安�
 - 服务来源：`ctx.get('pluginManager')` 与 `ctx.get('pluginMarket')`，都是 DSH 自带的远程面实现；缺失时返回 503 `service-unavailable`，页面显示「当前 profile 没有装载插件管理服务」。
 - `repoBranches` 是唯一一处不由 DSH 服务提供的方法：上游常把修复合在分支上却不发版，面板因此允许「按分支安装」。它先用 `git ls-remote --heads https://github.com/<owner>/<repo>` 列分支（GitHub REST 未登录只有 60 次/小时，容易限流；git 不受限也不用 token），git 不可用时才退回 REST；每个分支再从 `raw.githubusercontent.com/<repo>/<branch>/package.json` 读出版本号、`engines.dsh`、是否声明 `dsh.bundle`、以及 `dsh.meta.title` / 描述（不同分支的描述可能不一样，选之前要看得见）。结果按仓库缓存 60 秒。仓库名先过 `owner/name` 正则，git 用参数数组调用（不过 shell）。失败码：`invalid-params`、`repo-unavailable`、`github-rate-limited`、`github-unavailable`。
 - 分支入口在卡片左下角的版本号上（不是弹窗）：点开是内联下拉，列分支、版本、要求范围、描述，逐行安装。安装分支走 `installBundle` 的 git spec（`git+https://github.com/<repo>#<分支>`），**不登记进索引**：索引只收录发布版本，分支是活口，随时会被上游重写。
+- 索引分两份：`index.json`（精选，人工收录）与 `community.json`（社区目录，从 dsh-plugin.org 同步）。社区条目只做**仓库级核实**——`git ls-remote` 能读到 HEAD、该提交的 package.json 声明 `dsh.bundle`、版本是 semver；字段一律取自仓库本身，不采信第三方目录的版本号。面板工具栏的「社区目录」按钮调 `setIndexes` 把 `community.json` 加进订阅，精选索引不掺沙子。
+- 市场列表按 `storeRenderLimit`（默认 120）分批渲染，避免社区目录几千条一次塞进 DOM；搜索与筛选会重置上限。搜索结果仍然走宿主，能覆盖全部条目。
 - 安全：只接受 POST + 同源（`sec-fetch-site` 非 `cross-site`，`origin` 主机须与 `host` 一致），请求体上限 512 KiB。
 - 配置项编辑不在远程面里（只有模型侧 `Config.listConfigs`），所以详情页只做包信息与逐行启停，不提供配置表单。
 
@@ -64,7 +67,7 @@ DeepSeek Harness 桌面端 APP 的前端工程，当前包含插件中心（安�
 ## 验证入口
 
 - 改动后运行 `npm run build`；涉及 UI 视觉时启动 `npm run dev` 并核对两个 Tab、详情页、通知条、确认弹窗、安装对话框，以及卡片版本号下拉（展开、筛选内外、点击外部收起）。
-- 涉及收录库或索引时：`npm run build` 后检查 `web/index.json`（10 个插件、format 1），并用 `npm run preview` 确认 `/index.json` 可访问。收录或升版后跑一遍 `npm run check:engines`：它按索引登记的 commit 拉真实 package.json 核对版本与 `engines.dsh`，并列出上游已有更新版本的插件；不一致时退出码为 1。
+- 涉及收录库或索引时：`npm run build` 后检查 `web/index.json`（10 个插件、format 1）与 `web/community.json`，并用 `npm run preview` 确认两份都可通过 HTTP 取到。收录或升版后跑 `npm run check:engines`：它按索引登记的 commit 拉真实 package.json 核对版本与 `engines.dsh`，并列出上游已有更新版本的插件，不一致时退出码为 1。刷新社区目录：`npm run community:scan`（约 20 分钟，5,700 个仓库）→ `npm run community:build` → `npm run build`。
 - 索引发布走两个地址：`raw.githubusercontent.com`（即时生效）与 `cdn.jsdelivr.net/gh/Wcof/DeepSeekBox@main/index.json`（缓存约 12 小时）。**每次推送后要 purge 一次** `curl https://purge.jsdelivr.net/gh/Wcof/DeepSeekBox@main/index.json`，否则用 jsDelivr 订阅的人会长时间看到旧索引。
 - 涉及组合包时：`npm run validate:bundle` 必须通过；再按 Host 路由自查项验证 `/deepseekbox/` 入口页 200、静态资源 200、`/deepseekbox` 308 补斜杠、路径穿越不返回 200、缺 `web/` 时 503 带修复提示。
 - 涉及 API 时：用假 ctx 起本地 HTTP 覆盖 `listBundles` / `setBundleEnabled` / `installBundle` / `searchMarket` / `repoBranches` 的透传、跨站与异源拒绝、未知方法 400、非 POST 405；`repoBranches` 另外覆盖非法仓库名 400 `invalid-params`、不存在的仓库 `repo-unavailable`、以及重复调用命中缓存（第二次应明显快于第一次）。真实链路只能在 DSH 内验证（`ctx.get('pluginManager')` 存在与否）。

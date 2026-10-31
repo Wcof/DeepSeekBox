@@ -16,7 +16,9 @@ const {
   setStoreAuthor,
   visibleStoreCount,
   filteredLocal,
-  storeGroups,
+  renderedStoreGroups,
+  storeHasMore,
+  showMoreStore,
   updateCount,
   switchTab,
   checkUpdates,
@@ -28,6 +30,7 @@ const {
   loadStore,
   scheduleStoreSearch,
   subscribeSelfIndex,
+  subscribeCommunityIndex,
   gotoStore,
   setLocalFilter,
   setStoreFilter,
@@ -437,6 +440,17 @@ function hostOf(url: string): string {
           <button
             type="button"
             class="filters__icon-btn"
+            :disabled="state.busy.subscribe"
+            title="订阅从 dsh-plugin.org 同步的社区目录（条目较多）"
+            @click="subscribeCommunityIndex()"
+          >
+            <span v-if="state.busy.subscribe" class="spinner" />
+            <AppIcon v-else name="inbox" :size="16" />
+            社区目录
+          </button>
+          <button
+            type="button"
+            class="filters__icon-btn"
             :disabled="listLoading('store')"
             aria-label="刷新索引源"
             @click="loadStore(true)"
@@ -516,10 +530,10 @@ function hostOf(url: string): string {
           <span>索引共 {{ storeTruncated }} 个插件，已加载 {{ state.market.length }} 个（达到单次翻页上限）</span>
         </p>
 
-        <section v-for="group in storeGroups" :key="group.url" class="store-group">
+        <section v-for="group in renderedStoreGroups" :key="group.url" class="store-group">
           <header class="store-group__header">
             <span class="store-group__name">{{ group.title }}</span>
-            <span class="store-group__count">{{ group.entries.length }}</span>
+            <span class="store-group__count">{{ group.total }}</span>
             <span class="store-group__id">{{ hostOf(group.url) }}</span>
             <span class="store-group__rule" />
             <a
@@ -536,6 +550,12 @@ function hostOf(url: string): string {
             <StorePluginCard v-for="entry in group.entries" :key="`${group.url}${entry.name}`" :entry="entry" />
           </div>
         </section>
+
+        <div v-if="storeHasMore" class="store-more">
+          <button type="button" class="btn btn--secondary" @click="showMoreStore()">
+            显示更多（共 {{ visibleStoreCount }} 个，已显示 {{ state.storeRenderLimit }}）
+          </button>
+        </div>
       </template>
     </template>
   </div>
