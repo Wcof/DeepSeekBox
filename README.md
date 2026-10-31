@@ -1,11 +1,15 @@
 # DeepSeekBox：DeepSeek Harness 插件中心
 
+**中文** | [English](README.en.md)
+
 **DeepSeekBox 是 DeepSeek Harness（DSH）桌面端的插件中心**：在一个面板里浏览、安装、更新、启用或停用插件，并管理插件索引源。它本身也是一个可安装的 DSH 插件组合包，同时对外发布一份符合 DSH 规范的插件索引（`format: 1`），供任何 DSH 用户订阅。
 
 - 宿主：DeepSeek Harness 0.2.1 系列（开发与验收环境为 `0.2.1-rc.5`）
 - 包名 / 面板名：`deepseek-box` / 插件中心（Plugin Center）
 - 许可证：MIT
 - 索引源：`https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json`
+
+最短安装路径：在 DSH「发现 → Index sources」加上面那条索引地址，搜索「插件中心」安装，重启窗口；或在命令行执行 `dsh plugin add github:Wcof/DeepSeekBox`。
 
 如果你在找「DeepSeek Harness 插件在哪里装」「DSH 有没有插件市场」，这个项目提供的就是那层界面：插件列表来自宿主真实的 `pluginManager` / `pluginMarket` 服务，不维护第二份数据。
 
@@ -49,6 +53,12 @@ DeepSeekBox 是标准 DSH 组合包（`package.json` 声明 `dsh.bundle.patch`�
 
 - `github:Wcof/DeepSeekBox`
 - `git+https://github.com/Wcof/DeepSeekBox#<commit-sha>`（钉到某个提交，适合复现问题）
+
+或在命令行执行：
+
+```bash
+dsh plugin add github:Wcof/DeepSeekBox
+```
 
 ### 方式三：本地目录安装（开发用）
 
@@ -169,6 +179,12 @@ index.json          对外发布的插件索引（构建时生成）
 页面只认 `src/services/pluginService.ts`，它把每个动作翻译成 `POST /deepseekbox/api/rpc` 的 `{ method, params }`，由 Host 半边转给 DSH 的 `pluginManager` / `pluginMarket`。方法表：`status`、`listBundles`、`listPlugins`、`setBundleEnabled`、`setPluginEnabled`、`removeBundle`、`installBundle`、`listIndexes`、`setIndexes`、`searchMarket`、`repoBranches`（唯一不来自 DSH 服务的方法，用于读仓库分支）。
 
 接口只接受 POST + 同源请求，请求体上限 512 KiB；安装与卸载会跑 pnpm，可能持续数分钟。
+
+## 生态与相关项目
+
+- [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)：本项目运行的宿主，插件机制的来源。
+- [awesome-dsh-plugin](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin)：社区维护的 DSH 插件清单，找插件可以从这里开始。
+- 其他插件市场实现（`dsh-market`、`dsh-plugin-market` 等）各自维护自己的目录；DeepSeekBox 不替代它们，只是把索引源合并进一个面板，并额外提供兼容性标记与按分支安装。
 
 ## 相关文档
 
