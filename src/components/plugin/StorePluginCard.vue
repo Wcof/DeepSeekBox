@@ -18,21 +18,42 @@ const preferredVersion = computed(
     props.entry.versions[0],
 )
 
+/**
+ * 不兼容只针对「当前推荐的这个版本」：标注跟着收录版本走，
+ * 上游发布兼容的新版本、索引换成新版后，这里自然就不再显示。
+ */
 const incompatible = computed(() => preferredVersion.value?.compatible === false)
 
 /** 宿主给出的未满足要求，键为 engines.dsh 或 DSH peer 包名 */
 const requiredRange = computed(() => preferredVersion.value?.requirements?.['engines.dsh'])
 
+/** 文案里带上具体版本号：说的是这一版装不上，不是整个插件被拉黑 */
+const incompatibilityLead = computed(() => {
+  const version = preferredVersion.value?.version
+  return `${version ? `v${version} ` : '这一版'}与当前 DSH 版本不兼容`
+})
+
 const incompatibilityText = computed(() =>
   requiredRange.value
-    ? `与当前 DSH 版本不兼容（这个版本要求 DSH ${requiredRange.value}）`
-    : '与当前 DSH 版本不兼容',
+    ? `${incompatibilityLead.value}（要求 DSH ${requiredRange.value}）`
+    : incompatibilityLead.value,
 )
 
 const installedVersion = computed(() => props.entry.installation.installedVersion)
 
 const status = computed<{ text: string; class: string }>(() => {
-  switch (props.entry.installation.status) {
+  const installation = props.entry.installation.status
+  // 推荐版本装不上时，状态栏不能再写「可安装 / 可更新」
+  if (
+    incompatible.value &&
+    (installation === 'not-installed' || installation === 'update-available')
+  ) {
+    return {
+      text: installation === 'update-available' ? '更新受阻' : '不可安装',
+      class: 'status--warn',
+    }
+  }
+  switch (installation) {
     case 'update-available':
       return { text: '可更新', class: 'status--warn' }
     case 'different-version':
@@ -95,11 +116,7 @@ const repositoryLabel = computed(() => {
       </div>
       <div v-if="incompatible" class="plugin-card__fact plugin-card__fact--warn">
         <span><AppIcon name="alert-circle" :size="14" /></span>
-        <span>
-          与当前 DSH 版本不兼容<template v-if="requiredRange"
-            >，这个版本要求 DSH <span class="mono">{{ requiredRange }}</span></template
-          >
-        </span>
+        <span>{{ incompatibilityLead }}<template v-if="requiredRange">（要求 DSH <span class="mono">{{ requiredRange }}</span>）</template></span>
       </div>
     </div>
 

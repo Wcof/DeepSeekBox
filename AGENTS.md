@@ -51,7 +51,7 @@ DeepSeek Harness 桌面端 APP 的前端工程，当前包含插件中心（安�
   - `THIRD_PARTY_REGISTRY`（第三方收录）：经核实的社区 DSH 插件，标准相同——仓库真实存在、确为 DSH 插件（`dsh plugin add` 可装 / 声明 dsh.bundle），版本与许可证核对自仓库 package.json / LICENSE；展示时带「第三方」标签并按创作者分组。
 - 索引 `pluginIndex.ts` 的登记要求：
   - `VERSION_SOURCES`：publishTimestamp（整数 Unix 秒，Releases published_at；未发版或版本超前取 package.json 变更提交时间）+ commit（40 位小写 SHA，Release tag 解包或变更提交）；缺失时构建报错。插件中心自身条目由 `scripts/sync-self-entry.mjs` 在每次构建后同步到当前 main 提交（始终比包含它的提交旧一个提交，属预期）。
-  - `VERSION_SOURCES.enginesDsh`：必须原样镜像该 commit 上 package.json 的 `engines.dsh`（不加工范围），包没声明就省略该键。索引里**省略**表示「任意 DSH 版本」，写成 `{}` 等于向市场宣称无要求；而宿主装完仍会用 `semver.satisfies(运行时版本, engines.dsh, { includePrerelease: true })` 复核真实 package.json，漏登记的结果是市场照常显示「安装」、用户点下去才在安装阶段被拒并回滚。收录或升版时用 `curl https://raw.githubusercontent.com/<repo>/<commit>/package.json` 核对。
+  - `VERSION_SOURCES.enginesDsh`：必须原样镜像该 commit 上 package.json 的 `engines.dsh`（不加工范围），包没声明就省略该键。索引里**省略**表示「任意 DSH 版本」，写成 `{}` 等于向市场宣称无要求；而宿主装完仍会用 `semver.satisfies(运行时版本, engines.dsh, { includePrerelease: true })` 复核真实 package.json，漏登记的结果是市场照常显示「安装」、用户点下去才在安装阶段被拒并回滚。收录或升版时用 `curl https://raw.githubusercontent.com/<repo>/<commit>/package.json` 核对。**升版必须重抓**：不兼容标注只跟着登记的那个版本走，换了版本号却留着旧范围，标注会一直挂着（而且新版本来能装也装不上）。
   - `INDEX_ICONS`：icon 一律引用插件自己项目的图标文件（其仓库内 icon.svg / icon.jpg，URL 钉到收录版本提交并经 curl 核实 200）；项目未提供图标的用作者 GitHub 头像（`https://github.com/<user>.png`）。校验器允许 ≤32 KiB 的 data URI 或解析为 https 的 URL。
   - `author` 用 `authorLabel` 全称（如 `joeseesun（乔木）`），`title` 为双语展示名（`TITLE_EN` 登记 en 键）。
 - 收录检索入口参考 awesome-dsh-plugin 清单与 GitHub topic（`deepseek-harness`、`dsh-plugin`）；非 DeepSeek Harness 宿主的插件（如 CLIProxyAPI 插件）不得收录。
@@ -61,7 +61,7 @@ DeepSeek Harness 桌面端 APP 的前端工程，当前包含插件中心（安�
 ## 验证入口
 
 - 改动后运行 `npm run build`；涉及 UI 视觉时启动 `npm run dev` 并核对两个 Tab、详情页、通知条、确认弹窗与安装对话框。
-- 涉及收录库或索引时：`npm run build` 后检查 `web/index.json`（9 个插件、format 1），并用 `npm run preview` 确认 `/index.json` 可访问。
+- 涉及收录库或索引时：`npm run build` 后检查 `web/index.json`（10 个插件、format 1），并用 `npm run preview` 确认 `/index.json` 可访问。
 - 涉及组合包时：`npm run validate:bundle` 必须通过；再按 Host 路由自查项验证 `/deepseekbox/` 入口页 200、静态资源 200、`/deepseekbox` 308 补斜杠、路径穿越不返回 200、缺 `web/` 时 503 带修复提示。
 - 涉及 API 时：用假 ctx 起本地 HTTP 覆盖 `listBundles` / `setBundleEnabled` / `installBundle` / `searchMarket` 的透传、跨站与异源拒绝、未知方法 400、非 POST 405；真实链路只能在 DSH 内验证（`ctx.get('pluginManager')` 存在与否）。
 - 操作路径清单：检查更新 → 一键更新 / 单个更新、启用 / 停用组合包、卸载二次确认、商场安装与更新、按包名 / git / 本地目录安装、详情页逐行启停。

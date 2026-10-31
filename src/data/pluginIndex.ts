@@ -83,6 +83,8 @@ const DESCRIPTIONS_EN: Record<string, string> = {
     'A bottom terminal panel for DSH GUI: multi-session terminal on node-pty and xterm.js with split panes, session persistence and cross-platform support (ConPTY / openpty).',
   'dsh-our-free-model':
     'Use free models such as DeepSeek V4.1 Flash and Kimi K3 without login or API keys; includes a usage dashboard and an OpenAI-compatible local proxy.',
+  'dsh-guizang-design':
+    'Guizang Design brings a content-production toolkit into Harness: magazine-style web PPT decks, social cards, long-form page layout and a Chinese AI-ese remover, all on one design system, with a works gallery, workflows and a voice profile.',
 }
 
 const CATEGORY_BY_PLUGIN: Record<string, string> = {
@@ -95,6 +97,7 @@ const CATEGORY_BY_PLUGIN: Record<string, string> = {
   'dsh-quick-open': 'ui',
   'dsh-oh-my-terminal': 'tools',
   'dsh-our-free-model': 'models',
+  'dsh-guizang-design': 'productivity',
 }
 
 /** 英文展示名（title 的 en 键；zh 键使用收录库的展示名称） */
@@ -108,6 +111,7 @@ const TITLE_EN: Record<string, string> = {
   'dsh-quick-open': 'Quick Open',
   'dsh-oh-my-terminal': 'Oh My Terminal',
   'dsh-our-free-model': 'Our Free Model',
+  'dsh-guizang-design': 'Guizang Design',
 }
 
 /**
@@ -131,6 +135,8 @@ const INDEX_ICONS: Record<string, string> = {
     'https://raw.githubusercontent.com/btsd321/dsh-oh-my-terminal/e40df7b16a162b4df57bd9f77001474d347da748/icon.jpg',
   'dsh-our-free-model':
     'https://raw.githubusercontent.com/Ebony-Vinyl/dsh-our-free-model/e1b347aec9cc956eda70a766219f028a811078e2/icon.svg',
+  'dsh-guizang-design':
+    'https://raw.githubusercontent.com/op7418/dsh-guizang-design/c0bc1ec0accf6312f6e1e066cabb460b54da2b97/icon.png',
 }
 
 /**
@@ -177,6 +183,11 @@ const VERSION_SOURCES: Record<
   'dsh-quick-open': { publishTimestamp: 1791618520, commit: '81b04057d2ce6f7ad585b0d94a3de895c4f26143' }, // package.json 提交 · 2026-10-10T07:48:40Z；无 engines，DSH 要求写在 peerDependencies
   'dsh-oh-my-terminal': { publishTimestamp: 1793184490, commit: 'e40df7b16a162b4df57bd9f77001474d347da748' }, // release tag v0.4.7 解包 · 2026-10-28T10:48:10Z；engines 只有 node
   'dsh-our-free-model': { publishTimestamp: 1792990970, commit: 'e1b347aec9cc956eda70a766219f028a811078e2' }, // release v2.7.2 · 2026-10-26T05:02:50Z；engines 只有 node
+  'dsh-guizang-design': {
+    publishTimestamp: 1793371802,
+    commit: 'c0bc1ec0accf6312f6e1e066cabb460b54da2b97',
+    enginesDsh: '>=0.2.1-rc.2 <0.3.0',
+  }, // v0.1.0，未发 Release；取 package.json 最后变更提交 · 2026-10-30T14:50:02Z
 }
 
 /** 生成 DSH 插件索引（format 1）；收录库更新后索引随之更新 */

@@ -215,4 +215,23 @@ export const THIRD_PARTY_REGISTRY: CreatorGroup[] = [
       },
     ],
   },
+  {
+    creator: { id: 'op7418', name: '归藏', homepage: 'https://github.com/op7418' },
+    plugins: [
+      {
+        id: 'dsh-guizang-design',
+        name: '歸藏设计',
+        alias: '归藏设计',
+        description:
+          '歸藏设计：把内容生产 skill 装进 Harness——网页 PPT、图文卡片、网页排版、去 AI 味，共用一套设计系统；带作品库、内容生产工作流与语气档案。',
+        version: '0.1.0',
+        author: 'op7418',
+        authorName: '归藏',
+        license: 'AGPL-3.0-only',
+        source: 'third-party',
+        repo: 'op7418/dsh-guizang-design',
+        icon: 'palette',
+      },
+    ],
+  },
 ]
