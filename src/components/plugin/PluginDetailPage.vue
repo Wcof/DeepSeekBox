@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { pluginCenter } from '../../stores/pluginCenter'
-import { BUNDLE_ORIGIN_LABEL, BUNDLE_ORIGIN_TAG, bundleOrigin } from '../../types/plugin'
+import { BUNDLE_ORIGIN_LABEL, BUNDLE_ORIGIN_TAG, bundleOrigin, HOST } from '../../types/plugin'
 import AppIcon from '../icons/AppIcon.vue'
 import PluginTile from './PluginTile.vue'
 import type { PluginRow } from '../../types/plugin'
@@ -25,7 +25,7 @@ const availabilityText = computed(() => {
     case 'profile':
       return 'profile 依赖'
     case 'installation':
-      return '随 DSH 安装附带'
+      return `随${HOST.displayName}安装附带`
     case 'missing':
       return '文件缺失'
     default:
@@ -128,7 +128,9 @@ function onToggleRow(row: PluginRow): void {
           </div>
           <div class="config-info__row">
             <dt>可卸载</dt>
-            <dd>{{ bundle.removable && !bundle.readOnlyReason ? '是' : '否（随 DSH 提供或插件管理所需）' }}</dd>
+            <dd>
+              {{ bundle.removable && !bundle.readOnlyReason ? '是' : `否（随${HOST.displayName}提供或插件管理所需）` }}
+            </dd>
           </div>
         </dl>
 

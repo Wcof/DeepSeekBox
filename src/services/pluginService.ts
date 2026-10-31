@@ -1,3 +1,7 @@
+import { HOST } from '../types/plugin'
+import { rpcPathOf } from '../host/transport'
+import { BRAND } from '../core/protocol/brand'
+import { provenanceOf } from '../core/protocol/catalog'
 import type {
   InstalledBundle,
   MarketEntry,
@@ -10,13 +14,20 @@ import type {
 } from '../types/plugin'
 
 /**
- * 真实插件内核接口层：浏览器侧只做一次 JSON-RPC，落到本包 Host 半边的
- * `/deepseekbox/api/rpc`，由它在 DSH 进程里调用 pluginManager / pluginMarket 服务。
+ * 真实插件内核接口层：浏览器侧只做一次 JSON-RPC，落到本包 Host 半边提供的
+ * RPC 端点，由它在宿主进程里调用插件管理与插件市场服务。
+ *
+ * 端点 URL 与方法名都从当前适配器取——换宿主只换适配器，这一层不用跟着改。
  *
  * 这里不做任何本地状态：每次调用都问宿主，避免 UI 与真实状态分叉。
  */
 
-const ENDPOINT = './api/rpc'
+const ENDPOINT = rpcPathOf(HOST)
+
+/** host 连不上时的提示：宿主叫什么由当前适配器决定 */
+function hostUnreachable(): string {
+  return `没有连上${HOST.displayName}宿主，${BRAND.name}需要在宿主里打开才起得来`
+}
 
 export class PluginApiError extends Error {
   readonly code: string
@@ -45,12 +56,12 @@ async function rpc<T>(method: string, params?: unknown): Promise<T> {
       body: JSON.stringify({ method, params: params ?? {} }),
     })
   } catch {
-    throw new PluginApiError('host-unreachable', '没有连上 DSH 宿主，插件中心需要在 DeepSeek Harness 里打开')
+    throw new PluginApiError('host-unreachable', hostUnreachable())
   }
 
   const payload = (await response.json().catch(() => null)) as RpcPayload<T> | null
   if (response.status === 404 || payload === null) {
-    throw new PluginApiError('host-unreachable', '没有连上 DSH 宿主，插件中心需要在 DeepSeek Harness 里打开')
+    throw new PluginApiError('host-unreachable', hostUnreachable())
   }
   if (!response.ok || payload.ok !== true) {
     const code = payload.error?.code ?? 'operation-error'
@@ -60,7 +71,7 @@ async function rpc<T>(method: string, params?: unknown): Promise<T> {
   return payload.result as T
 }
 
-// ============ 原始结构（DSH 远程面） ============
+// ============ 原始结构（宿主远程面，由适配器负责翻译成 canonical） ============
 
 type Localized = string | Record<string, string>
 
@@ -131,14 +142,16 @@ function localized(value: Localized | undefined): string | undefined {
 }
 
 /**
- * 收录来源由索引自己声明：
- * - labels 里的 `official` 才算 DSH 官方（本 Box 的索引不写这个标记）；
- * - keywords 里的 `deepseekbox` 表示收录在本 Box 的索引里；
- * - 其余索引源一律按第三方处理。
+ * 收录来源由索引自己声明，但「哪些标记算官方」是宿主的约定，由适配器给出规则：
+ * 核心不认识任何具体宿主的字段名（labels 里的 official、keywords 里的标记词）。
  */
 function marketLabelOf(metadata: RawMarketEntry['metadata']): MarketLabel {
-  if ((metadata.labels ?? []).includes('official')) return 'official'
-  if ((metadata.keywords ?? []).includes('deepseekbox')) return 'catalog'
+  const provenance = provenanceOf(
+    { url: '', title: '', keywords: metadata.keywords ?? [], labels: metadata.labels ?? [] },
+    HOST.catalog.policy,
+  )
+  if (provenance === 'vendor') return 'official'
+  if (provenance === 'curated') return 'catalog'
   return 'third-party'
 }
 
@@ -287,7 +300,7 @@ export async function searchIndex(
       category: entry.metadata.category,
       keywords: entry.metadata.keywords ?? [],
       labels: entry.metadata.labels ?? [],
-      // 来源以索引的声明为准（labels 的 official / keywords 的 deepseekbox），不猜
+      // 来源以索引的声明为准（labels 的 official / keywords 的 plugbox），不猜
       label: marketLabelOf(entry.metadata),
       defaultVersion: entry.defaultVersion ?? preferred?.version,
       versions,

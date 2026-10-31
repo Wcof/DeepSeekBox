@@ -9,9 +9,9 @@
  *   3. 是 DSH 组合包：package.json 声明 dsh.bundle，且有 semver 版本
  *
  * 用法：
- *   node scripts/scan-dshhub.mjs --limit 50            # 抽样体检
- *   node scripts/scan-dshhub.mjs --stars 100           # 只扫星数达标的
- *   node scripts/scan-dshhub.mjs --all --out /tmp/report.json
+ *   node scripts/scan-community-hub.mjs --limit 50            # 抽样体检
+ *   node scripts/scan-community-hub.mjs --stars 100           # 只扫星数达标的
+ *   node scripts/scan-community-hub.mjs --all --out /tmp/report.json
  */
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
@@ -30,7 +30,7 @@ const value = (name, fallback) => {
 
 const limit = Number.parseInt(value('limit', '0'), 10)
 const minStars = Number.parseInt(value('stars', '0'), 10)
-const outPath = value('out', '/tmp/dshhub-scan.json')
+const outPath = value('out', '/tmp/community-scan.json')
 const SAMPLE = /^v?\d+\.\d+\.\d+/
 
 async function headOf(repo) {

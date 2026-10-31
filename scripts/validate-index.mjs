@@ -11,7 +11,7 @@ import { parseMarketIndex, MarketIndexError } from '@deepseek-ai/dsh-plugin-mark
 const file = process.argv[2] ?? 'index.json'
 const raw = await readFile(new URL(`../${file}`, import.meta.url), 'utf8')
 try {
-  const index = parseMarketIndex(JSON.parse(raw), `https://cdn.jsdelivr.net/gh/Wcof/DeepSeekBox@main/${file}`)
+  const index = parseMarketIndex(JSON.parse(raw), `https://cdn.jsdelivr.net/gh/Wcof/PlugBox@main/${file}`)
   console.log(`✓ ${file} 通过官方校验：format ${index.format}，${index.plugins.length} 个插件`)
 } catch (error) {
   if (error instanceof MarketIndexError) {

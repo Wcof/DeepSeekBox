@@ -109,7 +109,7 @@ else {
   const refs = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((m) => m[1])
   if (refs.length === 0) fail('web/index.html 没有引用任何资源')
   for (const ref of refs) {
-    if (ref.startsWith('/')) fail(`web/index.html 用了绝对路径 ${ref}；挂到 /deepseekbox/ 下会 404（vite base 需为 './'）`)
+    if (ref.startsWith('/')) fail(`web/index.html 用了绝对路径 ${ref}；挂到 /plugbox/ 下会 404（vite base 需为 './'）`)
     else if (!(await exists(path.join('web', ref.replace(/^\.\//, ''))))) fail(`web/index.html 引用的资源不存在：${ref}`)
   }
 }

@@ -13,7 +13,9 @@ import type {
   Toast,
   ToastType,
 } from '../types/plugin'
-import { bundleOrigin, MARKET_CATEGORY_LABEL } from '../types/plugin'
+import { bundleOrigin, MARKET_CATEGORY_LABEL, HOST } from '../types/plugin'
+import { BRAND } from '../core/protocol/brand'
+import { hostRequirementOf } from '../core/manifest'
 import * as service from '../services/pluginService'
 import { DEV_GUIDE_URL } from '../data/catalog'
 import { isPinnedIndex } from '../data/pinnedIndex'
@@ -29,16 +31,16 @@ interface ConfirmOptions {
 }
 
 /** 本 Box 发布的索引源，供「一键订阅」使用 */
-const SELF_INDEX_URL = 'https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json'
+const SELF_INDEX_URL = 'https://raw.githubusercontent.com/Wcof/PlugBox/main/index.json'
 
 /**
  * 社区目录：从 dsh-plugin.org 同步的 5,000+ 条，逐条做过仓库级核实。
  * 单独发布、单独订阅——精选索引不掺沙子，需要全量的用户点一下就有。
  */
-const COMMUNITY_INDEX_URL = 'https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/community.json'
+const COMMUNITY_INDEX_URL = 'https://raw.githubusercontent.com/Wcof/PlugBox/main/community.json'
 
 /**
- * 插件中心唯一状态 owner：所有数据来自 DSH 宿主的 pluginManager / pluginMarket，
+ * 插件中心唯一状态 owner：数据一律来自宿主侧的插件管理与插件市场服务（经适配器调用），
  * UI 只读 state 并调用 action，不持有任何本地副本。
  */
 const state = reactive({
@@ -123,7 +125,7 @@ async function withBusy<T>(key: string, fn: () => Promise<T>): Promise<T | undef
 }
 
 const ERROR_TEXT: Record<string, string> = {
-  'host-unreachable': '没连上 DSH 宿主，请在 DeepSeek Harness 里打开插件中心',
+  'host-unreachable': `没连上宿主进程，请在${HOST.displayName}里打开${BRAND.name}`,
   'service-unavailable': '当前 profile 没有装载插件管理服务',
   'management-required': '这个包是插件管理所需，不能停用或卸载',
   unaddressable: '当前 profile 的 patch 无法唯一定位这一项',
@@ -135,7 +137,7 @@ const ERROR_TEXT: Record<string, string> = {
   'stop-profile': '当前 profile 没有启用 HMR，无法在线卸载',
   'bundle-in-use': '还有配置在使用这个组合包的组件，请先停用它们',
   'stale-approval': '待允许的安装脚本列表已变化，请重新安装',
-  'incompatible-version': '这个插件与当前 DSH 版本不兼容',
+  'incompatible-version': `这个插件与当前${HOST.displayName}版本不兼容`,
   'github-rate-limited': 'GitHub 接口被限流了，过几分钟再试',
   'repo-unavailable': '找不到这个仓库或它没有可读的分支',
   'github-unavailable': '读不到 GitHub 上的分支',
@@ -185,7 +187,7 @@ function withoutUpdate(bundle: InstalledBundle): InstalledBundle {
 /**
  * 用刚拿到的商场数据给已装组合包打「可更新」标记。
  * 只读索引，不装任何东西；返回可更新数量。
- * 默认版本与当前 DSH 不兼容时不打标记：宿主的安装前检查会拒掉它，提示「可更新」只会让人白点一次。
+ * 默认版本与当前宿主版本不兼容时不打标记：宿主的安装前检查会拒掉它，提示「可更新」只会让人白点一次。
  */
 function applyUpdateFlags(): number {
   // 搜索结果是子集：不在结果里的组合包保持原标记，别因为「没搜到」就抹掉可更新提示
@@ -316,7 +318,7 @@ async function loadLocal(): Promise<void> {
     state.hostOnline = false
     state.localStatus = 'error'
     state.indexErrors = {}
-    console.warn('[deepseekbox] listBundles failed:', describe(error))
+    console.warn('[plugbox] listBundles failed:', describe(error))
   }
 }
 
@@ -370,7 +372,7 @@ async function loadStore(refresh = false): Promise<void> {
     if (!isCurrent(token)) return
     state.storeStatus = 'error'
     state.storeProgress = ''
-    console.warn('[deepseekbox] listIndexes failed:', describe(error))
+    console.warn('[plugbox] listIndexes failed:', describe(error))
   } finally {
     // 只有仍是当前时才交还「在途」标记：已经作废的这次不该替后来者清账
     if (isCurrent(token)) storeLoadInFlight = false
@@ -510,7 +512,7 @@ async function loadStoreSearch(): Promise<void> {
   } catch (error) {
     if (!isCurrent(token)) return
     state.storeStatus = 'error'
-    console.warn('[deepseekbox] searchMarket failed:', describe(error))
+    console.warn('[plugbox] searchMarket failed:', describe(error))
   } finally {
     if (isCurrent(token)) storeLoadInFlight = false
   }
@@ -530,11 +532,11 @@ async function subscribeSelfIndex(): Promise<void> {
     try {
       const indexes = await service.listIndexes()
       if (indexes.some((index) => index.url === SELF_INDEX_URL)) {
-        toast('info', '已经订阅过 DeepSeekBox 索引源')
+        toast('info', `已经订阅过 ${BRAND.name} 索引源`)
         return
       }
       await service.setIndexes([...indexes.map((index) => index.url), SELF_INDEX_URL])
-      toast('success', '已订阅 DeepSeekBox 索引源')
+      toast('success', `已订阅 ${BRAND.name} 索引源`)
       await loadStore(true)
     } catch (error) {
       toast('error', `订阅失败：${describe(error)}`)
@@ -592,7 +594,7 @@ async function updateOne(name: string): Promise<void> {
       toast(
         result.application === 'restart-required' ? 'warning' : 'success',
         result.application === 'restart-required'
-          ? `已更新 ${bundle.title}，重启 DSH 后生效`
+          ? `已更新 ${bundle.title}，重启宿主后生效`
           : `已将 ${bundle.title} 更新到 v${bundle.latestVersion}`,
       )
       await loadLocal()
@@ -650,7 +652,7 @@ async function setEnabled(name: string, enabled: boolean): Promise<void> {
       const restart = result.application === 'restart-required'
       toast(
         restart ? 'warning' : 'success',
-        `已${enabled ? '启用' : '停用'} ${bundle?.title ?? name}${restart ? '，重启 DSH 后生效' : ''}`,
+        `已${enabled ? '启用' : '停用'} ${bundle?.title ?? name}${restart ? '重启宿主后生效' : ''}`,
       )
       await loadLocal()
       await loadStore()
@@ -680,7 +682,7 @@ async function removeByName(name: string): Promise<void> {
       }
       toast(
         result.application === 'restart-required' ? 'warning' : 'success',
-        `已卸载 ${bundle.title}${result.application === 'restart-required' ? '，重启 DSH 后生效' : ''}`,
+        `已卸载 ${bundle.title}${result.application === 'restart-required' ? '重启宿主后生效' : ''}`,
       )
       if (state.detailName === name) closeDetail()
       await loadLocal()
@@ -703,12 +705,13 @@ async function installEntry(entry: MarketEntry): Promise<void> {
     }
     // 宿主的安装前检查会按真实 package.json 拒绝不兼容版本并回滚，这里先拦一次，省掉一轮安装卸载
     if (target.compatible === false) {
-      const range = target.requirements?.['engines.dsh']
+      // 键可能有命名空间（适配器加的前缀），也可能就是宿主原始字段名，两个都要认
+      const range = hostRequirementOf(HOST, target.requirements, 'engines.dsh')
       toast(
         'warning',
         range
-          ? `${entry.title} v${version} 要求 DSH ${range}，当前宿主不满足，装不进去`
-          : `${entry.title} v${version} 与当前 DSH 版本不兼容，装不进去`,
+          ? `${entry.title} v${version} 要求${HOST.displayName} ${range}，当前环境不满足，装不进去`
+          : `${entry.title} v${version} 与当前${HOST.displayName}版本不兼容，装不进去`,
       )
       return
     }
@@ -721,7 +724,7 @@ async function installEntry(entry: MarketEntry): Promise<void> {
       }
       toast(
         result.application === 'restart-required' ? 'warning' : 'success',
-        `已安装 ${entry.title} v${version}${result.application === 'restart-required' ? '，重启 DSH 后生效' : ''}`,
+        `已安装 ${entry.title} v${version}${result.application === 'restart-required' ? '重启宿主后生效' : ''}`,
       )
       await loadLocal()
       await loadStore()
@@ -747,7 +750,7 @@ async function installSpec(spec: string): Promise<boolean> {
       }
       toast(
         result.application === 'restart-required' ? 'warning' : 'success',
-        `已安装 ${result.target}${result.application === 'restart-required' ? '，重启 DSH 后生效' : ''}`,
+        `已安装 ${result.target}${result.application === 'restart-required' ? '重启宿主后生效' : ''}`,
       )
       state.installOpen = false
       await loadLocal()
@@ -789,7 +792,7 @@ async function installBranchAt(
       const restart = result.application === 'restart-required'
       toast(
         restart ? 'warning' : 'success',
-        `已安装 ${entry.title}${version}（${branch.name} 分支）${restart ? '，重启 DSH 后生效' : ''}`,
+        `已安装 ${entry.title}${version}（${branch.name} 分支）${restart ? '重启宿主后生效' : ''}`,
       )
       await loadLocal()
       await loadStore()
@@ -857,7 +860,7 @@ const INSTALL_RANK: Record<MarketEntry['installation']['status'], number> = {
   provided: 4,
 }
 
-/** 管理 Tab 的基表：当前 profile 里已安装或随 DSH 附带的组合包 */
+/** 管理 Tab 的基表：当前 profile 里已安装或随宿主附带的组合包 */
 const localBase = computed(() =>
   state.bundles.filter((bundle) => bundle.installed || bundle.availability === 'installation'),
 )
@@ -893,8 +896,8 @@ const storeStats = computed(() => {
 
 const STORE_FILTER_TEXT: Record<StoreFilter, string> = {
   all: '全部',
-  official: 'DSH 官方',
-  catalog: 'DeepSeekBox 收录',
+  official: HOST.labels.vendor,
+  catalog: HOST.labels.curated,
   'third-party': '第三方来源',
   installed: '已安装',
   available: '可安装',

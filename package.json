@@ -1,31 +1,31 @@
 {
-  "name": "deepseek-box",
+  "name": "plugbox",
   "private": true,
-  "version": "0.5.3",
+  "version": "1.0.0",
   "type": "module",
-  "description": "DeepSeek Harness 插件中心：安装、更新与管理 DSH 插件，聚合插件索引源，并发布可订阅的 DSH 插件索引。",
+  "description": "PlugBox 插件适配与管理工具：统一的插件协议与资源抽象，经适配层接入任意支持自定义插件的引擎层与智能体层工具。",
   "keywords": [
-    "deepseek-harness",
-    "deepseek",
-    "dsh",
-    "dsh-plugin",
+    "plugbox",
     "plugin-center",
     "plugin-manager",
-    "plugin-market",
+    "plugin-registry",
+    "plugin-adapter",
     "plugin-index",
+    "engine-agnostic",
+    "agent-tools",
     "vue",
     "typescript"
   ],
-  "homepage": "https://github.com/Wcof/DeepSeekBox",
+  "homepage": "https://github.com/Wcof/PlugBox",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Wcof/DeepSeekBox.git"
+    "url": "git+https://github.com/Wcof/PlugBox.git"
   },
   "license": "MIT",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
-    "./icon": "./icons/deepseekbox-plugin-center.svg",
+    "./icon": "./icons/plugbox.svg",
     "./locale/*.json": "./locale/*.json",
     "./package.json": "./package.json"
   },
@@ -34,7 +34,7 @@
     "client.js",
     "cordis.patch.yml",
     "locale/*.json",
-    "icons/deepseekbox-plugin-center.svg",
+    "icons/plugbox.svg",
     "web"
   ],
   "dsh": {
@@ -49,12 +49,16 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "postbuild": "cp web/index.json index.json && cp web/community.json community.json && node scripts/sync-self-entry.mjs && node scripts/validate-index.mjs index.json && node scripts/validate-index.mjs community.json && node scripts/validate-bundle.mjs && node scripts/check-pinned-index.mjs",
-  "check:all": "npm run validate:bundle && npm run validate:index index.json && npm run validate:index community.json && npm run check:engines && npm run check:pinned",
-  "validate:bundle": "node scripts/validate-bundle.mjs",
-  "check:engines": "node scripts/check-engines.mjs",
-  "check:pinned": "node scripts/check-pinned-index.mjs",
-    "community:scan": "node scripts/scan-dshhub.mjs --all",
+    "postbuild": "cp web/index.json index.json && cp web/community.json community.json && node scripts/sync-self-entry.mjs && npm run validate:index index.json && npm run validate:index community.json && npm run validate:bundle && npm run check:pinned && npm run check:adapters",
+    "validate:index": "node scripts/validate-index.mjs",
+    "validate:index": "node scripts/validate-index.mjs",
+    "validate:index": "node scripts/validate-index.mjs",
+    "validate:bundle": "node scripts/validate-bundle.mjs",
+    "check:engines": "node scripts/check-engines.mjs",
+    "check:pinned": "node scripts/check-pinned-index.mjs",
+    "check:adapters": "node scripts/check-adapters.mjs",
+    "check:all": "npm run validate:bundle && npm run validate:index index.json && npm run validate:index community.json && npm run check:engines && npm run check:pinned && npm run check:adapters",
+    "community:scan": "node scripts/scan-community-hub.mjs --all",
     "community:build": "node scripts/build-community.mjs",
     "preview": "vite preview"
   },

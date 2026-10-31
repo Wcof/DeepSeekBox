@@ -1,24 +1,24 @@
 /**
- * DeepSeekBox 插件中心 —— Client 半边。
+ * PlugBox 插件中心 —— Client 半边（宿主浏览器的行李在这一半）。
  *
  * 浏览器侧只注册两件事：侧栏入口（sidebar.panellist）与主面板（main）。
- * 面板内容是同源 iframe，指向 Host 半边提供的 /deepseekbox/ 静态页，
+ * 面板内容是同源 iframe，指向 Host 半边提供的 /plugbox/ 静态页，
  * 也就是仓库里 Vue 单页应用的构建产物。
  */
 window.__ModuleLoader__.load({
-  id: 'deepseek-box',
+  id: 'plugbox',
   factory(require) {
     const React = require('react')
     const h = React.createElement
-    const NS = 'deepseekBox'
-    const PANEL_ID = 'deepseekbox-plugin-center'
-    const ROUTE = '/deepseekbox/'
+    const NS = 'plugBox'
+    const PANEL_ID = 'plugbox-plugin-center'
+    const ROUTE = '/plugbox/'
 
     const COPY = {
       zh: {
         'panel.title': '插件中心',
         'panel.loading': '正在打开插件中心…',
-        'error.not-built': '插件中心前端未构建：包内缺少 web/index.html。请在仓库运行 npm run build 后重启 DeepSeek Harness。',
+        'error.not-built': '插件中心前端未构建：包内缺少 web/index.html。请在仓库运行 npm run build 后重启宿主窗口。',
         'error.not-found': '插件中心路由未注册：请确认插件已启用。',
         'error.network': '无法连接插件中心页面，请重试。',
         'error.unknown': '插件中心加载失败。',
@@ -27,7 +27,7 @@ window.__ModuleLoader__.load({
       en: {
         'panel.title': 'Plugin Center',
         'panel.loading': 'Opening the plugin center…',
-        'error.not-built': 'The plugin center frontend is not built: web/index.html is missing. Run npm run build in the repository, then restart DeepSeek Harness.',
+        'error.not-built': 'The plugin center frontend is not built: web/index.html is missing. Run npm run build in the repository, then restart the host window.',
         'error.not-found': 'The plugin center route is not registered. Make sure the plugin is enabled.',
         'error.network': 'Cannot reach the plugin center page. Try again.',
         'error.unknown': 'The plugin center failed to load.',
@@ -125,7 +125,7 @@ window.__ModuleLoader__.load({
     return {
       inject: ['slots', 'locale'],
       apply(ctx) {
-        ctx.effect(() => ctx.locale.register(NS, COPY), 'deepseekbox:copy')
+        ctx.effect(() => ctx.locale.register(NS, COPY), 'plugbox:copy')
         const t = ctx.locale.bind(NS)
         const Panel = createPanel(t)
         ctx.slots.inject('sidebar.panellist', () =>

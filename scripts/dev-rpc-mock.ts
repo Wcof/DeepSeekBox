@@ -1,7 +1,7 @@
 /**
  * 仅开发服务器使用的 RPC 假数据（不进构建产物）。
  *
- * 生产环境里 /deepseekbox/api/rpc 由组合包 Host 半边接真实的 DSH 服务；
+ * 生产环境里 /plugbox/api/rpc 由组合包 Host 半边接真实的 DSH 服务；
  * 但 npm run dev 时页面跑在 Vite 上，没有宿主，所以这里给一份形状一致的数据，
  * 让 UI 能在浏览器里改。数据刻意取自本机 profile 的真实组合包名。
  */
@@ -87,10 +87,10 @@ export function createDevRpcMock() {
       version: '0.3.0',
       rows: [['qiaomu-home', 'qiaomu-home-dsh', '工作台']],
     }),
-    bundle('deepseek-box', '插件中心', '浏览、安装与管理插件，并把收录库发布成索引源。', {
+    bundle('plugbox', '插件中心', '浏览、安装与管理插件，并把收录库发布成索引源。', {
       version: '0.3.0',
-      source: 'git+https://github.com/Wcof/DeepSeekBox#90026aa',
-      rows: [['deepseekbox-plugin-center', 'deepseek-box', '插件中心']],
+      source: 'git+https://github.com/Wcof/PlugBox#90026aa',
+      rows: [['plugbox-plugin-center', 'plugbox', '插件中心']],
     }),
   ]
 
@@ -105,7 +105,7 @@ export function createDevRpcMock() {
   )
 
   const indexes = [
-    { url: 'https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json', title: { zh: 'DeepSeekBox 插件索引', en: 'DeepSeekBox Plugin Catalog' } },
+    { url: 'https://raw.githubusercontent.com/Wcof/PlugBox/main/index.json', title: { zh: 'PlugBox 插件索引', en: 'PlugBox Plugin Catalog' } },
   ]
 
   const market = [
@@ -115,7 +115,7 @@ export function createDevRpcMock() {
       description: { zh: '在 DeepSeek Harness 中阅读 RSS，与原生 AI 对话伴读文章。', en: 'Read RSS in Harness.' },
       author: 'joeseesun（乔木）',
       repository: { url: 'https://github.com/joeseesun/qiaomu-rss-dsh' },
-      metadata: { category: 'reading', keywords: ['乔木 RSS', 'deepseekbox'], labels: [] },
+      metadata: { category: 'reading', keywords: ['乔木 RSS', 'plugbox'], labels: [] },
       versions: [
         {
           version: '0.9.2',
@@ -134,7 +134,7 @@ export function createDevRpcMock() {
       description: { zh: '让 Harness 成为一天的起点。', en: 'Start your day in Harness.' },
       author: 'joeseesun（乔木）',
       repository: { url: 'https://github.com/joeseesun/qiaomu-home-dsh' },
-      metadata: { category: 'productivity', keywords: ['乔木 Home', 'deepseekbox'], labels: [] },
+      metadata: { category: 'productivity', keywords: ['乔木 Home', 'plugbox'], labels: [] },
       versions: [
         {
           version: '0.3.1',
@@ -334,7 +334,7 @@ export function createDevRpcMock() {
           .map((item) => ({ ...item, installation: installationOf(item.name) }))
         return {
           url,
-          title: { zh: 'DeepSeekBox 插件索引', en: 'DeepSeekBox Plugin Catalog' },
+          title: { zh: 'PlugBox 插件索引', en: 'PlugBox Plugin Catalog' },
           fetchedAt: Date.now(),
           entries,
           total: entries.length,

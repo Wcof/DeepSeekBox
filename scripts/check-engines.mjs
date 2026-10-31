@@ -28,7 +28,7 @@ function enginesDshOf(manifest) {
 }
 
 const index = JSON.parse(await readFile(new URL('../index.json', import.meta.url), 'utf8'))
-const SELF_REPO = 'Wcof/DeepSeekBox'
+const SELF_REPO = 'Wcof/PlugBox'
 
 const rows = []
 let mismatches = 0

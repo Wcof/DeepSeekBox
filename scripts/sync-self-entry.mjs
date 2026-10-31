@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * 把「插件中心」自身条目同步到当前 main 提交：
- * index.json 里的 deepseek-box 指向本仓库构建时的 HEAD
+ * index.json 里的自身条目指向本仓库构建时的 HEAD
  * （version 取 package.json，commit / publishTimestamp 取 git）。
  * 必须在 index.json 生成之后、校验之前运行。
  *
@@ -13,9 +13,18 @@ import { execSync } from 'node:child_process'
 
 const commit = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim()
 const publishTimestamp = Number.parseInt(execSync('git log -1 --format=%ct HEAD', { encoding: 'utf8' }).trim(), 10)
-const { version, engines } = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
+const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
+const { version, engines } = pkg
 
-/** 自身条目的 DSH 版本要求同样取自 package.json，不写死空对象 */
+// 自身条目的包名以 package.json 为准：改名漏了一处的话这里立刻炸，
+// 而不是产出一个指向不存在条目的索引（插件源：src/core/protocol/brand.ts 的 BRAND）
+const SELF_PACKAGE = 'plugbox'
+const SELF_REPO = 'Wcof/PlugBox'
+if (pkg.name !== SELF_PACKAGE) {
+  throw new Error(`package.json 的包名是 ${pkg.name}，但索引登记的是 ${SELF_PACKAGE}`)
+}
+
+/** 宿主版本要求取自 package.json，不写死空对象 */
 const enginesDsh = typeof engines?.dsh === 'string' ? engines.dsh : undefined
 
 async function sync(label, url) {
@@ -26,13 +35,13 @@ async function sync(label, url) {
     if (label === 'web/index.json') return false
     throw error
   }
-  const plugin = index.plugins.find((p) => p.name === 'deepseek-box')
-  if (!plugin) throw new Error(`${label} 中不存在 deepseek-box 条目`)
+  const plugin = index.plugins.find((p) => p.name === SELF_PACKAGE)
+  if (!plugin) throw new Error(`${label} 中不存在 ${SELF_PACKAGE} 条目`)
   plugin.versions = [
     {
       version,
       publishTimestamp,
-      source: { type: 'git', url: 'https://github.com/Wcof/DeepSeekBox', commit },
+      source: { type: 'git', url: `https://github.com/${SELF_REPO}`, commit },
       engines: enginesDsh === undefined ? {} : { dsh: enginesDsh },
     },
   ]

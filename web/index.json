@@ -1,12 +1,12 @@
 {
   "format": 1,
   "title": {
-    "en": "DeepSeekBox Plugin Catalog",
-    "zh": "DeepSeekBox 插件索引"
+    "en": "PlugBox Plugin Catalog",
+    "zh": "PlugBox 插件索引"
   },
   "description": {
-    "en": "Curated DeepSeek Harness plugin catalog maintained by DeepSeekBox: official picks and verified community plugins.",
-    "zh": "DeepSeekBox 维护的 DeepSeek Harness 插件收录索引：官方收录与经核实的社区插件。"
+    "en": "Curated PlugBox catalog for engine-layer and agent tools: verified plugins, readable from any host we adapt to.",
+    "zh": "PlugBox 维护的插件收录索引：面向引擎层与智能体层工具，收录经过核实的插件，可被任意已适配宿主读取。"
   },
   "metadata": {
     "categories": {
@@ -52,38 +52,38 @@
   },
   "plugins": [
     {
-      "name": "deepseek-box",
+      "name": "plugbox",
       "title": {
         "zh": "插件中心",
-        "en": "DeepSeekBox Plugin Center"
+        "en": "PlugBox Plugin Center"
       },
       "description": {
-        "en": "The DeepSeek Harness plugin center: reads and writes the live plugin state (install, enable, remove, index sources); also published as the DeepSeekBox catalog index.",
-        "zh": "DeepSeek Harness 插件中心：直接读写真实插件状态（安装、启停、卸载、索引源），打开即提示可更新版本；同时作为官方收录索引源发布。"
+        "en": "A plugin center that reads and writes live plugin state (install, enable, remove, index sources) and adapts the same catalog to whichever supported host it runs in.",
+        "zh": "插件适配与管理工具：直接读写宿主里真实的插件状态（安装、启停、卸载、索引源），打开即提示可更新版本；同时把自己记录的目录发布成宿主可订阅的插件索引。"
       },
       "author": "Wcof",
-      "icon": "https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/icons/deepseekbox-plugin-center.svg",
-      "homepage": "https://github.com/Wcof/DeepSeekBox",
+      "icon": "https://raw.githubusercontent.com/Wcof/PlugBox/main/icons/plugbox.svg",
+      "homepage": "https://github.com/Wcof/PlugBox",
       "repository": {
-        "url": "https://github.com/Wcof/DeepSeekBox"
+        "url": "https://github.com/Wcof/PlugBox"
       },
       "metadata": {
         "category": "tools",
         "keywords": [
-          "DeepSeekBox",
-          "deepseekbox"
+          "PlugBox",
+          "plugbox"
         ],
         "labels": [],
         "sortKeys": {}
       },
       "versions": [
         {
-          "version": "0.5.3",
-          "publishTimestamp": 1793449661,
+          "version": "1.0.0",
+          "publishTimestamp": 1793449682,
           "source": {
             "type": "git",
-            "url": "https://github.com/Wcof/DeepSeekBox",
-            "commit": "f6c963bdd494ec5725b1592963e0e27f7d1d95cb"
+            "url": "https://github.com/Wcof/PlugBox",
+            "commit": "2901cbf63753a1cd6bb68d97fdea716b4023ecda"
           },
           "engines": {}
         }
@@ -109,7 +109,7 @@
         "category": "reading",
         "keywords": [
           "乔木 RSS",
-          "deepseekbox"
+          "plugbox"
         ],
         "labels": [],
         "sortKeys": {}
@@ -149,7 +149,7 @@
         "category": "reading",
         "keywords": [
           "乔木阅读",
-          "deepseekbox"
+          "plugbox"
         ],
         "labels": [],
         "sortKeys": {}
@@ -189,7 +189,7 @@
         "category": "learning",
         "keywords": [
           "乔木 UI 学习",
-          "deepseekbox"
+          "plugbox"
         ],
         "labels": [],
         "sortKeys": {}
@@ -229,7 +229,7 @@
         "category": "productivity",
         "keywords": [
           "乔木 Home",
-          "deepseekbox"
+          "plugbox"
         ],
         "labels": [],
         "sortKeys": {}
@@ -269,7 +269,7 @@
         "category": "ui",
         "keywords": [
           "命令面板",
-          "deepseekbox"
+          "plugbox"
         ],
         "labels": [],
         "sortKeys": {}
@@ -307,7 +307,7 @@
         "category": "ui",
         "keywords": [
           "快速打开",
-          "deepseekbox"
+          "plugbox"
         ],
         "labels": [],
         "sortKeys": {}
@@ -345,7 +345,7 @@
         "category": "tools",
         "keywords": [
           "终端面板",
-          "deepseekbox"
+          "plugbox"
         ],
         "labels": [],
         "sortKeys": {}
@@ -383,7 +383,7 @@
         "category": "models",
         "keywords": [
           "免费模型接入",
-          "deepseekbox"
+          "plugbox"
         ],
         "labels": [],
         "sortKeys": {}
@@ -421,7 +421,7 @@
         "category": "productivity",
         "keywords": [
           "归藏设计",
-          "deepseekbox"
+          "plugbox"
         ],
         "labels": [],
         "sortKeys": {}

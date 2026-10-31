@@ -1,10 +1,13 @@
 /**
- * DeepSeek Harness 官方插件收录库 —— 本文件是索引源（index.json）的唯一维护入口。
+ * 插件收录库 —— 本文件是索引源（index.json）的唯一维护入口。
  * 按创作者划分：收录新插件时在对应创作者的 plugins 下追加；
  * 新的创作者新增一个 CreatorGroup 分组。第三方插件不在本库维护。
  *
- * 注意：商场页面不再读这里的数据，它直接问 DSH 的 pluginMarket；
+ * 注意：商场页面不再读这里的数据，它直接问宿主的插件市场服务；
  * 本库只负责生成对外发布的索引文件。
+ *
+ * 这里的插件描述都刻意不提具体宿主：同一个插件经适配器转换后应当能落到不同宿主上，
+ * 「它是某某引擎专用插件」属于宿主侧信息，不属于插件本身。
  */
 
 /** 开发指南 / 开发资料入口（待确认：如有 Harness 官方开发文档再替换） */
@@ -48,19 +51,19 @@ export interface CreatorGroup {
 export const OFFICIAL_REGISTRY: CreatorGroup[] = [
   {
     // 插件中心自身作为第一款官方插件置于首位
-    creator: { id: 'Wcof', name: 'DeepSeekBox', homepage: 'https://github.com/Wcof/DeepSeekBox' },
+    creator: { id: 'Wcof', name: 'PlugBox', homepage: 'https://github.com/Wcof/PlugBox' },
     plugins: [
       {
-        id: 'deepseek-box',
+        id: 'plugbox',
         name: '插件中心',
-        alias: 'DeepSeekBox',
+        alias: 'PlugBox',
         description:
-          'DeepSeek Harness 插件中心：直接读写真实插件状态（安装、启停、卸载、索引源），打开即提示可更新版本；同时作为官方收录索引源发布。',
-        version: '0.3.2',
+          '插件适配与管理工具：直接读写宿主里真实的插件状态（安装、启停、卸载、索引源），打开即提示可更新版本；同时把自己记录的目录发布成宿主可订阅的插件索引。',
+        version: '0.5.3',
         author: 'Wcof',
         license: 'MIT',
         source: 'official',
-        repo: 'Wcof/DeepSeekBox',
+        repo: 'Wcof/PlugBox',
         icon: 'puzzle',
       },
     ],
@@ -134,7 +137,7 @@ export const OFFICIAL_REGISTRY: CreatorGroup[] = [
 ]
 
 /**
- * 第三方收录区：经核实的社区 DeepSeek Harness 插件，不进官方收录库。
+ * 第三方收录区：经核实的社区插件，不进官方收录库（当前收录的这批均来自 DSH 生态）。
  * 收录标准与官方库一致：仓库真实存在、确为 DSH 插件（dsh plugin add 可装 /
  * 声明 dsh.bundle），版本与许可证核对自仓库 package.json / LICENSE。
  */

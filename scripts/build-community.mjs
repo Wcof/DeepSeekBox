@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * 把 scan-dshhub.mjs 的体检报告转成社区目录数据（data/community/entries.json）。
+ * 把 scan-community-hub.mjs 的体检报告转成社区目录数据（data/community/entries.json）。
  *
  * 只接受体检通过（仓库可达 + 有 package.json + 声明 dsh.bundle + 版本是 semver）的条目；
  * 字段一律以仓库里的 package.json 为准，描述只用目录里的中文文案（英文目录有则一并带上）。
  *
- * 用法：node scripts/build-community.mjs --report /tmp/dshhub-full.json
+ * 用法：node scripts/build-community.mjs --report /tmp/community-scan.json
  */
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 
@@ -15,7 +15,7 @@ const value = (name, fallback) => {
   return index >= 0 && args[index + 1] !== undefined ? args[index + 1] : fallback
 }
 
-const reportPath = value('report', '/tmp/dshhub-full.json')
+const reportPath = value('report', '/tmp/community-scan.json')
 const outPath = value('out', 'data/community/entries.json')
 
 /** 目录分类 → 本索引的分类键（索引 metadata.categories 里的那六个） */

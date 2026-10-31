@@ -1,6 +1,7 @@
-# DeepSeekBox 插件中心 · 组合包 patch
-# 只插入一行：Host 半边（index.js）提供 /deepseekbox 同源静态路由，
+# PlugBox · 组合包 patch（DeepSeek Harness 宿主）
+# 只插入一行：Host 半边（index.js）提供 /plugbox 同源静态路由，
 # Client 半边（client.js）注册侧栏入口与主面板。
+# id / name 与 src/adapters/dsh 里的 UiBinding 保持一致，npm run check:adapters 会核对。
 - insert:
-    - id: deepseekbox-plugin-center
-      name: 'deepseek-box'
+    - id: plugbox-plugin-center
+      name: 'plugbox'

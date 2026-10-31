@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { pluginCenter } from '../../stores/pluginCenter'
-import { MARKET_CATEGORY_LABEL } from '../../types/plugin'
+import { MARKET_CATEGORY_LABEL, MARKET_LABEL_TEXT, HOST } from '../../types/plugin'
+import { BRAND } from '../../core/protocol/brand'
 import type { LocalFilter } from '../../types/plugin'
 import AppIcon from '../icons/AppIcon.vue'
 import LocalPluginCard from './LocalPluginCard.vue'
@@ -59,8 +60,8 @@ const LOCAL_CARDS = [
 
 const STORE_CARDS = [
   { key: 'all', label: '全部收录', icon: 'box', tint: '' },
-  { key: 'official', label: 'DSH 官方', icon: 'shield-check', tint: 'green' },
-  { key: 'catalog', label: 'DeepSeekBox 收录', icon: 'inbox', tint: 'blue' },
+  { key: 'official', label: MARKET_LABEL_TEXT.official, icon: 'shield-check', tint: 'green' },
+  { key: 'catalog', label: MARKET_LABEL_TEXT.catalog, icon: 'inbox', tint: 'blue' },
   { key: 'third-party', label: '第三方来源', icon: 'users', tint: 'violet' },
   { key: 'installed', label: '已安装', icon: 'circle-check', tint: 'amber' },
   { key: 'available', label: '可安装', icon: 'download', tint: 'blue' },
@@ -72,7 +73,7 @@ const LOCAL_CHIPS: ReadonlyArray<{ key: LocalFilter; label: string }> = LOCAL_CA
 
 /**
  * 市场侧的统计卡按数据出现：只有真的存在某个来源时才显示那一档，
- * 避免订阅了社区目录后还摆着「DSH 官方 0 / 第三方 0」两张空卡。
+ * 避免订阅了社区目录后还摆着「官方 0 / 第三方 0」两张空卡。
  * 市场侧不再另起一行 chips——统计卡就是唯一的来源筛选入口。
  */
 const storeCards = computed(() =>
@@ -100,7 +101,7 @@ const SUBTITLE = {
   store: '浏览已订阅索引源收录的插件，按需安装或更新',
 }
 
-/** 本包自带的索引文件：页面挂在 /deepseekbox/ 前缀下，必须用相对路径 */
+/** 本包自带的索引文件：页面挂在宿主给的路由前缀下，必须用相对路径 */
 function openIndexSource(): void {
   window.open('./index.json', '_blank', 'noopener')
 }
@@ -342,11 +343,11 @@ function hostOf(url: string): string {
 
       <div v-else-if="listError('local')" class="state-box">
         <span class="state-box__icon"><AppIcon name="alert-circle" :size="40" /></span>
-        <span class="state-box__title">{{ hostOffline() ? '没连上 DSH 宿主' : '插件列表加载失败' }}</span>
+        <span class="state-box__title">{{ hostOffline() ? `没连上 ${HOST.displayName}` : '插件列表加载失败' }}</span>
         <span class="state-box__hint">
           {{
             hostOffline()
-              ? '插件中心要在 DeepSeek Harness 里打开；npm run dev 只用于调页面样式'
+              ? `${BRAND.name}要在宿主里打开才有插件数据；npm run dev 只用于调页面样式`
               : '宿主返回了错误，请稍后重试'
           }}
         </span>
@@ -521,7 +522,7 @@ function hostOf(url: string): string {
             type="button"
             class="filters__icon-btn"
             :disabled="state.busy.subscribe"
-            title="订阅从 dsh-plugin.org 同步的社区目录（条目较多）"
+            title="订阅社区索引（条目多，来自第三方站点同步）"
             @click="subscribeCommunityIndex()"
           >
             <span v-if="state.busy.subscribe" class="spinner" />
@@ -587,11 +588,11 @@ function hostOf(url: string): string {
 
       <div v-else-if="listError('store') || hostOffline()" class="state-box">
         <span class="state-box__icon"><AppIcon name="alert-circle" :size="40" /></span>
-        <span class="state-box__title">{{ hostOffline() ? '没连上 DSH 宿主' : '插件市场加载失败' }}</span>
+        <span class="state-box__title">{{ hostOffline() ? `没连上 ${HOST.displayName}` : '插件市场加载失败' }}</span>
         <span class="state-box__hint">
           {{
             hostOffline()
-              ? '插件中心要在 DeepSeek Harness 里打开；npm run dev 只用于调页面样式'
+              ? `${BRAND.name}要在宿主里打开才有插件数据；npm run dev 只用于调页面样式`
               : '宿主没有返回索引源列表，请稍后重试'
           }}
         </span>
@@ -603,7 +604,7 @@ function hostOf(url: string): string {
       <div v-else-if="!state.indexes.length" class="state-box">
         <span class="state-box__icon"><AppIcon name="inbox" :size="40" /></span>
         <span class="state-box__title">还没有配置索引源</span>
-        <span class="state-box__hint">订阅 DeepSeekBox 索引后，这里会列出它收录的插件</span>
+        <span class="state-box__hint">订阅 {{ BRAND.name }} 索引后，这里会列出它收录的插件</span>
         <div class="state-box__actions">
           <button
             type="button"
@@ -612,7 +613,7 @@ function hostOf(url: string): string {
             @click="subscribeSelfIndex()"
           >
             <span v-if="state.busy.subscribe" class="spinner" />
-            订阅 DeepSeekBox 索引
+            订阅 {{ BRAND.name }} 索引
           </button>
           <button type="button" class="btn btn--secondary" @click="openIndexSource()">
             查看索引文件

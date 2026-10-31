@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Plugin Center",
-    "description": "Plugin center for DeepSeek Harness: browse, install, update and manage DSH plugins, aggregate plugin index sources and install from a git branch. Also publishes a subscribable DSH plugin index."
+    "description": "PlugBox plugin adapter: browse, install, update and manage plugins, aggregate plugin index sources and install from a git branch. Also publishes a plugin index any supported host can subscribe to."
   }
 }

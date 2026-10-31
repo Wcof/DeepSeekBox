@@ -1,10 +1,13 @@
 import { OFFICIAL_REGISTRY, THIRD_PARTY_REGISTRY } from './catalog'
 import { authorLabel } from '../types/plugin'
+import { BRAND } from '../core/protocol/brand'
 
 /**
- * DeepSeekBox 插件市场索引源。
- * 生成符合 DSH 插件索引 format 1 的 index.json（对齐 awesome-dsh-plugin 索引结构），
- * 供 DeepSeek Harness「发现」页添加索引源后浏览本 Box 收录的全部插件。
+ * PlugBox 插件市场索引源。
+ *
+ * 产出的是目标宿主索引格式（当前两个宿主都用 cordis 系 format 1），
+ * 供宿主的「发现」页添加索引源后浏览本 Box 收录的全部插件。
+ * 收录库本身是宿主中立的；要发布成别的宿主能读的格式，加对应适配器的输出函数即可。
  */
 
 interface Bilingual {
@@ -68,8 +71,8 @@ const CATEGORIES: Record<string, IndexCategory> = {
 
 /** 每个收录插件的英文描述（与中文描述同义） */
 const DESCRIPTIONS_EN: Record<string, string> = {
-  'deepseek-box':
-    'The DeepSeek Harness plugin center: reads and writes the live plugin state (install, enable, remove, index sources); also published as the DeepSeekBox catalog index.',
+  'plugbox':
+    'A plugin center that reads and writes live plugin state (install, enable, remove, index sources) and adapts the same catalog to whichever supported host it runs in.',
   'qiaomu-rss-dsh':
     'Read RSS in DeepSeek Harness with native AI companion reading; supports OPML import/export and podcast transcript reading.',
   'qiaomu-reader-dsh':
@@ -91,7 +94,7 @@ const DESCRIPTIONS_EN: Record<string, string> = {
 }
 
 const CATEGORY_BY_PLUGIN: Record<string, string> = {
-  'deepseek-box': 'tools',
+  'plugbox': 'tools',
   'qiaomu-rss-dsh': 'reading',
   'qiaomu-reader-dsh': 'reading',
   'qiaomu-ui-learn-dsh': 'learning',
@@ -105,7 +108,7 @@ const CATEGORY_BY_PLUGIN: Record<string, string> = {
 
 /** 英文展示名（title 的 en 键；zh 键使用收录库的展示名称） */
 const TITLE_EN: Record<string, string> = {
-  'deepseek-box': 'DeepSeekBox Plugin Center',
+  'plugbox': `${BRAND.name} Plugin Center`,
   'qiaomu-rss-dsh': 'Qiaomu RSS',
   'qiaomu-reader-dsh': 'Qiaomu Reader',
   'qiaomu-ui-learn-dsh': 'Qiaomu UI Learn',
@@ -123,8 +126,8 @@ const TITLE_EN: Record<string, string> = {
  * 全部 URL 已用 curl 核实（200，2026-10-30）。
  */
 const INDEX_ICONS: Record<string, string> = {
-  'deepseek-box':
-    'https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/icons/deepseekbox-plugin-center.svg',
+  'plugbox':
+    `https://raw.githubusercontent.com/${BRAND.repository}/main/icons/plugbox.svg`,
   'qiaomu-rss-dsh': 'https://github.com/joeseesun.png',
   'qiaomu-reader-dsh':
     'https://raw.githubusercontent.com/joeseesun/qiaomu-reader-dsh/af0a5a283deee91157efd42eeb2b06372c79b230/icon.svg',
@@ -161,7 +164,7 @@ const VERSION_SOURCES: Record<
   string,
   { publishTimestamp: number; commit: string; enginesDsh?: string }
 > = {
-  'deepseek-box': { publishTimestamp: 1793318933, commit: '26f9321ada24ceff750e9e565d91bef3e519c52d' }, // 本仓库 main；postbuild 由 scripts/sync-self-entry.mjs 同步到最新提交
+  'plugbox': { publishTimestamp: 1793318933, commit: '26f9321ada24ceff750e9e565d91bef3e519c52d' }, // 本仓库 main；postbuild 由 scripts/sync-self-entry.mjs 同步到最新提交
   'qiaomu-rss-dsh': {
     publishTimestamp: 1793168802,
     commit: '7f2deb7ed9583675927663de74d97f70b277c52e',
@@ -234,8 +237,8 @@ export function buildCommunityIndex(entries: CommunityEntry[]): PluginCatalogInd
       repository: { url },
       metadata: {
         category: entry.category,
-        // deepseekbox 让面板显示「DeepSeekBox 收录」；dshhub 标出条目来自社区目录同步
-        keywords: ['deepseekbox', 'dshhub'],
+        // 标记词决定面板上那枚来源标签：catalogMarker → 「本 Box 收录」，communityMarker 说明这条来自第三方站点同步
+        keywords: [BRAND.catalogMarker, BRAND.communityMarker],
         labels: [],
         sortKeys: {},
       },
@@ -252,10 +255,10 @@ export function buildCommunityIndex(entries: CommunityEntry[]): PluginCatalogInd
 
   return {
     format: 1,
-    title: { en: 'DeepSeekBox Community Catalog', zh: 'DeepSeekBox 社区插件目录' },
+    title: { en: `${BRAND.name} Community Catalog`, zh: `${BRAND.name} 社区插件目录` },
     description: {
-      en: 'Community DSH plugins mirrored from dsh-plugin.org with repo-level verification: the repository is reachable, its package.json declares dsh.bundle, and the version is a real release.',
-      zh: '从 dsh-plugin.org 同步的社区 DSH 插件，逐条做过仓库级核实：仓库可达、package.json 声明 dsh.bundle、版本号来自包本身。',
+      en: 'Community catalog built with repo-level verification: the repository is reachable, its package.json declares a plugin bundle, and the version is a real release. The current entries come from the DSH-side community directory.',
+      zh: '社区插件目录，逐条做过仓库级核实：仓库可达、package.json 声明了组合包、版本号来自包本身。当前条目来源为 DSH 生态的社区站点。',
     },
     metadata: {
       categories: CATEGORIES,
@@ -266,7 +269,8 @@ export function buildCommunityIndex(entries: CommunityEntry[]): PluginCatalogInd
   }
 }
 
-/** 生成 DSH 插件索引（format 1）；收录库更新后索引随之更新 */export function buildPluginCatalogIndex(): PluginCatalogIndex {
+/** 生成本 Box 的插件索引（cordis 系 format 1）；收录库更新后索引随之更新 */
+export function buildPluginCatalogIndex(): PluginCatalogIndex {
   const plugins = [...OFFICIAL_REGISTRY, ...THIRD_PARTY_REGISTRY].flatMap((group) =>
     group.plugins.map((plugin): IndexPlugin => {
       const versionSource = VERSION_SOURCES[plugin.id]
@@ -289,8 +293,8 @@ export function buildCommunityIndex(entries: CommunityEntry[]): PluginCatalogInd
         repository: { url },
         metadata: {
           category: CATEGORY_BY_PLUGIN[plugin.id] ?? 'tools',
-          // 只是「收录在本 Box 的索引里」，不等于 DSH 官方；官方的说法留给 labels 里的 official
-          keywords: [plugin.alias, 'deepseekbox'],
+          // 只是「收录在本 Box 的索引里」，不等于宿主官方；官方的说法留给 labels 里的 official
+          keywords: [plugin.alias, BRAND.catalogMarker],
           labels: [],
           sortKeys: {},
         },
@@ -309,10 +313,10 @@ export function buildCommunityIndex(entries: CommunityEntry[]): PluginCatalogInd
 
   return {
     format: 1,
-    title: { en: 'DeepSeekBox Plugin Catalog', zh: 'DeepSeekBox 插件索引' },
+    title: { en: `${BRAND.name} Plugin Catalog`, zh: `${BRAND.name} 插件索引` },
     description: {
-      en: 'Curated DeepSeek Harness plugin catalog maintained by DeepSeekBox: official picks and verified community plugins.',
-      zh: 'DeepSeekBox 维护的 DeepSeek Harness 插件收录索引：官方收录与经核实的社区插件。',
+      en: `Curated ${BRAND.name} catalog for engine-layer and agent tools: verified plugins, readable from any host we adapt to.`,
+      zh: `${BRAND.name} 维护的插件收录索引：面向引擎层与智能体层工具，收录经过核实的插件，可被任意已适配宿主读取。`,
     },
     metadata: {
       categories: CATEGORIES,

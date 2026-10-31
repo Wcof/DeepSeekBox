@@ -1,4 +1,6 @@
-# DSH 插件装不上：「版本不符」到底在说什么
+# 插件装不上：「引擎版本不符」到底在说什么
+
+> **归属说明：** 本文讲的这套 `engines.dsh` 判定逻辑，属于 **DeepSeek Harness（DSH）宿主及其适配器**，不是 PlugBox 核心层的通用规则。PlugBox 的核心层只负责「把宿主声明的兼容范围如实呈现」，真正的安装准入判断始终发生在宿主侧。如果你用的不是 DSH，本文的具体规则不适用，但「范围该写成区间而不是枚举」这条写作建议是通用的。
 
 > 一篇写给 DeepSeek Harness 用户和插件作者的排查笔记。基于 2026-10-31 的 DSH `0.2.1-rc.5` 与插件 `qiaomu-home-dsh@0.3.1` 实测。
 
@@ -49,7 +51,7 @@ DSH 的判定逻辑在 `@deepseek-ai/dsh-app-boot` 的 `evaluatePluginCompatibil
 
 ### 3. 按分支安装（上游把修复放在分支上时）
 
-很多作者会把修复合在分支或 PR 上，但迟迟不发版。DeepSeekBox 的插件中心支持按分支安装：点卡片左下角的版本号，选分支，装的是该分支当前的头提交。
+很多作者会把修复合在分支或 PR 上，但迟迟不发版。PlugBox 的插件市场支持按分支安装：点卡片左下角的版本号，选分支，装的是该分支当前的头提交。
 
 这是旁路，不是正解：
 
@@ -69,10 +71,10 @@ node -e "console.log(require('semver').satisfies(process.argv[1], process.argv[2
 
 ## 附：怎么在安装前就看见这个问题
 
-DSH 原生是在安装之后才校验。DeepSeekBox 把索引里登记的 `engines.dsh` 提前展示：与你当前版本不匹配的版本，卡片上直接标「版本不符」，安装按钮禁用，并在提示里写出它要求的范围。
+DSH 原生是在安装之后才校验。PlugBox 把索引里登记的兼容范围提前展示：与你当前版本不匹配的版本，卡片上直接标「版本不符」，安装按钮禁用，并在提示里写出它要求的范围。
 
-索引方面，DeepSeekBox 自己维护的索引会原样镜像每个插件在该提交上的 `engines.dsh`——不加工范围，也不把「未声明」写成「任意版本」。这样市场里的判断和宿主安装时的判断是同一套。
+索引方面，PlugBox 自己维护的索引会原样镜像每个插件在该提交上的 `engines.dsh`——不加工范围，也不把「未声明」写成「任意版本」。这样市场里的判断和宿主安装时的判断是同一套。
 
 ---
 
-相关：<https://github.com/Wcof/DeepSeekBox> · 索引源 <https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json>
+相关：<https://github.com/Wcof/PlugBox> · 索引源 <https://raw.githubusercontent.com/Wcof/PlugBox/main/index.json> · [DSH 宿主契约](hosts/dsh-spec.md)

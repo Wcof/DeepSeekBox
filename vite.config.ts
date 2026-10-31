@@ -4,7 +4,7 @@ import vue from '@vitejs/plugin-vue'
 import { buildCommunityIndex, buildPluginCatalogIndex, type CommunityEntry } from './src/data/pluginIndex'
 import { createDevRpcMock } from './scripts/dev-rpc-mock.ts'
 
-/** 社区目录的体检结果：由 scripts/scan-dshhub.mjs + build-community.mjs 生成，不进前端包 */
+/** 社区目录的体检结果：由 scripts/scan-community-hub.mjs + build-community.mjs 生成，不进前端包 */
 const COMMUNITY_ENTRIES = new URL('./data/community/entries.json', import.meta.url)
 
 function communityJson(): string {
@@ -16,14 +16,14 @@ function communityJson(): string {
 }
 
 /**
- * 插件市场索引源：把收录库输出为 DSH 插件索引（format 1）。
+ * 插件市场索引源：把收录库输出成宿主可读的插件索引（当前为 cordis 系 format 1）。
  * - `vite build` 时写入 web/index.json（精选）与 web/community.json（社区目录）；
  * - 开发服务器在两个路径上直接返回，便于本地联调「发现」页。
  */
 function pluginIndexSource(): Plugin {
   const json = () => `${JSON.stringify(buildPluginCatalogIndex(), null, 2)}\n`
   return {
-    name: 'deepseekbox-plugin-index-source',
+    name: 'plugbox-plugin-index-source',
     configureServer(server) {
       server.middlewares.use('/index.json', (_req, res) => {
         res.setHeader('Content-Type', 'application/json; charset=utf-8')
@@ -44,12 +44,12 @@ function pluginIndexSource(): Plugin {
 }
 
 /**
- * 开发服务器的假宿主：生产环境由组合包 Host 半边提供 /deepseekbox/api/rpc，
+ * 开发服务器的假宿主：生产环境由宿主适配器的 Host 半边提供 /plugbox/api/rpc，
  * npm run dev 时用同一形状的数据顶上，页面无需改动即可联调。
  */
 function devHostMock(): Plugin {
   return {
-    name: 'deepseekbox-dev-host-mock',
+    name: 'plugbox-dev-host-mock',
     apply: 'serve',
     configureServer(server) {
       server.middlewares.use('/api/rpc', createDevRpcMock())
@@ -58,12 +58,12 @@ function devHostMock(): Plugin {
 }
 
 export default defineConfig(({ command }) => ({
-  // 构建产物要能以 /deepseekbox/ 前缀挂在 DSH 宿主里，资源路径必须相对；
+  // 构建产物要能挂在宿主给的路由前缀下，资源路径必须相对；
   // 开发服务器仍在站点根目录，保持绝对 base。
   base: command === 'build' ? './' : '/',
   plugins: [vue(), pluginIndexSource(), devHostMock()],
   build: {
-    // web/ 是随包提交的插件前端产物（DSH 从 git 安装时不执行构建），不要当成临时目录。
+    // web/ 是随包提交的插件前端产物（宿主从 git 安装时不执行构建），不要当成临时目录。
     outDir: 'web',
     emptyOutDir: true,
   },

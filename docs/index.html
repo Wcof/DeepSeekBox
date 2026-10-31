@@ -3,36 +3,36 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>DeepSeekBox — DeepSeek Harness 插件中心与插件索引源</title>
+    <title>PlugBox — 插件适配与管理工具（支持自定义插件的引擎与智能体层）</title>
     <meta
       name="description"
-      content="DeepSeekBox 是 DeepSeek Harness（DSH）的插件中心：安装、更新、启停 DSH 插件，聚合插件索引源，标出版本不兼容的插件，并支持按分支安装。同时发布可订阅的 format 1 插件索引。"
+      content="PlugBox 是面向所有支持自定义插件的引擎层与智能体层工具的插件适配与管理工具：在一个面板里安装、更新、启停插件，聚合多个插件索引源，标出版本不兼容的插件，并支持按分支安装。首个支持的宿主是 DeepSeek Harness。"
     />
-    <link rel="canonical" href="https://wcof.github.io/DeepSeekBox/" />
+    <link rel="canonical" href="https://wcof.github.io/PlugBox/" />
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="DeepSeekBox — DeepSeek Harness 插件中心" />
+    <meta property="og:title" content="PlugBox — 插件适配与管理工具" />
     <meta
       property="og:description"
-      content="在 DeepSeek Harness 里安装、更新、启停插件，聚合多个插件索引源，标出不兼容版本，并支持按分支安装。"
+      content="插件适配与管理工具：核心层与任何引擎无关，宿主差异收敛在适配器里。在一个面板里管理插件、聚合索引源、标记不兼容版本、按分支安装。"
     />
-    <meta property="og:url" content="https://wcof.github.io/DeepSeekBox/" />
+    <meta property="og:url" content="https://wcof.github.io/PlugBox/" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@graph": [
           {
             "@type": "SoftwareApplication",
-            "name": "DeepSeekBox",
-            "alternateName": ["DeepSeekBox 插件中心", "DSH 插件中心"],
+            "name": "PlugBox",
+            "alternateName": ["PlugBox 插件适配与管理工具", "插件中心"],
             "applicationCategory": "DeveloperApplication",
             "operatingSystem": "macOS",
-            "softwareVersion": "0.4.3",
-            "url": "https://wcof.github.io/DeepSeekBox/",
-            "downloadUrl": "https://github.com/Wcof/DeepSeekBox",
-            "codeRepository": "https://github.com/Wcof/DeepSeekBox",
+            "softwareVersion": "1.0.0",
+            "url": "https://wcof.github.io/PlugBox/",
+            "downloadUrl": "https://github.com/Wcof/PlugBox",
+            "codeRepository": "https://github.com/Wcof/PlugBox",
             "license": "https://opensource.org/licenses/MIT",
-            "description": "DeepSeek Harness（DSH）的插件中心：安装、更新与启停 DSH 插件，聚合插件索引源，标记版本不兼容，并支持按分支安装；同时发布可订阅的插件索引。",
+            "description": "面向所有支持自定义插件的引擎层与智能体层工具的插件适配与管理工具：安装、更新与启停插件，聚合多个插件索引源，标记版本不兼容，并支持按分支安装；同时发布可订阅的插件索引。首个支持的宿主是 DeepSeek Harness。",
             "author": { "@type": "Person", "name": "Wcof", "url": "https://github.com/Wcof" },
             "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CNY" }
           },
@@ -41,10 +41,10 @@
             "mainEntity": [
               {
                 "@type": "Question",
-                "name": "DeepSeek Harness 插件在哪里安装？",
+                "name": "PlugBox 支持哪些宿主？",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "两种方式：在 DeepSeek Harness 的「发现 → Index sources」添加 DeepSeekBox 的索引地址，搜索插件名后点安装；或在终端执行 dsh plugin --profile web add <包名或 git 地址>。装完需要重启窗口，因为插件的 Host 端代码在启动时加载。"
+                  "text": "第一个支持的宿主是 DeepSeek Harness（DSH，已在 0.2.1-rc.5 上实测），zcode 的 DeepSeek Harness 是已知宿主但尚未实测。项目分核心层与适配层两层：新增一个宿主只需要加一个适配器加少量配置，核心层不用改。没有适配器的宿主不在支持范围内。"
                 }
               },
               {
@@ -52,7 +52,7 @@
                 "name": "插件显示「版本不符」是什么意思？",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "该版本的 package.json 里 engines.dsh 声明的 DSH 版本范围不包含你当前运行的版本。DSH 会用 semver 在安装后校验，不满足就拒绝并回滚；DeepSeekBox 把这个判断提前到列表里，直接禁用安装并写出要求的版本范围。"
+                  "text": "该版本的 package.json 里声明的宿主兼容范围（engines.dsh）不包含你当前运行的版本。DSH 会用 semver 在安装后校验，不满足就拒绝并回滚；PlugBox 把这个判断提前到列表里，直接禁用安装并写出要求的版本范围。"
                 }
               },
               {
@@ -65,10 +65,18 @@
               },
               {
                 "@type": "Question",
-                "name": "「DeepSeekBox 收录」是 DSH 官方收录吗？",
+                "name": "「PlugBox 收录」是宿主官方收录吗？",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "不是。它只表示该插件被 DeepSeekBox 维护的索引收录，属于本项目的整理；DSH 官方收录在索引里另有 official 标记，两者在界面上用不同标签区分。"
+                  "text": "不是。它只表示该插件被 PlugBox 维护的索引收录，属于本项目的整理；宿主官方收录由各宿主自己的标记判定（DeepSeek Harness 是索引条目里的 official 标记），两者在界面上用不同标签区分。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "旧的 DeepSeekBox 订阅地址还能用吗？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "不能。仓库已改名为 Wcof/PlugBox，旧的 Wcof/DeepSeekBox 索引地址已失效。请删除旧订阅，改订阅 https://raw.githubusercontent.com/Wcof/PlugBox/main/index.json 或对应的 jsDelivr 地址。"
                 }
               }
             ]
@@ -150,15 +158,15 @@
   <body>
     <div class="wrap">
       <header>
-        <div class="eyebrow">DeepSeek Harness · Plugin Center</div>
-        <h1>DeepSeekBox：DeepSeek Harness 插件中心</h1>
+        <div class="eyebrow">Plugin Adapter &amp; Manager</div>
+        <h1>PlugBox：插件适配与管理工具</h1>
         <p class="lead">
-          DeepSeekBox 是 DeepSeek Harness（DSH）桌面端的插件中心：在一个面板里浏览、安装、更新、启用或停用插件，聚合多个插件索引源，把装不上的版本提前标出来；上游只把修复合在分支上时，可以直接按分支安装。它本身也是一个可安装的 DSH 组合包，并对外发布一份可供订阅的插件索引。
+          PlugBox 面向所有支持自定义插件的引擎层与智能体层工具：在一个面板里浏览、安装、更新、启用或停用插件，聚合多个插件索引源，把装不上的版本提前标出来；上游只把修复合在分支上时，可以直接按分支安装。它分两层——<strong>核心层</strong>定义与任何引擎无关的插件协议，<strong>适配层</strong>里每个宿主一个适配器负责翻译清单字段、安装方式、UI 注册与 RPC 方法。新增一个宿主只需加一个适配器，不改核心。
         </p>
         <div class="meta">
           <span class="chip">MIT 许可</span>
-          <span class="chip">DSH 0.2.1-rc.5 验证</span>
-          <span class="chip">format 1 插件索引</span>
+          <span class="chip">核心层 / 适配层分层</span>
+          <span class="chip">DeepSeek Harness 已实测</span>
           <span class="chip">macOS</span>
         </div>
       </header>
@@ -168,7 +176,11 @@
         <div class="cards">
           <div class="card">
             <h3>插件管理与市场</h3>
-            <p>读取宿主真实的 pluginManager / pluginMarket 服务，整包启停、逐行启停、安装、更新、卸载都落在当前 profile。</p>
+            <p>读取宿主真实的插件服务，整包启停、逐行启停、安装、更新、卸载都落在当前 profile，不维护第二份数据。</p>
+          </div>
+          <div class="card">
+            <h3>宿主差异收敛在适配器</h3>
+            <p>清单字段、安装方式、UI 注册协议、RPC 方法名、资源映射全部封在各自的适配器里，核心层保持中立。</p>
           </div>
           <div class="card">
             <h3>多索引源聚合</h3>
@@ -176,7 +188,7 @@
           </div>
           <div class="card">
             <h3>兼容性提前可见</h3>
-            <p>按索引登记的 engines.dsh 判断：当前 DSH 装不上的版本标「版本不符」并禁用安装，而不是装到一半回滚。</p>
+            <p>按索引登记的兼容范围（在 DSH 上是 <code>engines.dsh</code>）判断：当前宿主装不上的版本标「版本不符」并禁用安装。</p>
           </div>
           <div class="card">
             <h3>按分支安装</h3>
@@ -187,40 +199,55 @@
 
       <section>
         <h2>安装</h2>
+        <p>当前以 DeepSeek Harness 组合包的形式分发——<code>dsh.bundle.patch</code> 是 DSH 的协议字段，由 DSH 适配器提供。换到别的宿主后，安装参数由该宿主的适配器决定。</p>
         <h3>方式一：从插件索引安装（推荐）</h3>
         <ol>
-          <li>打开 DeepSeek Harness 的「发现 → Index sources」，添加 <code>https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json</code></li>
-          <li>搜索「插件中心」或 <code>deepseek-box</code>，点安装</li>
+          <li>打开 DeepSeek Harness 的「发现 → Index sources」，添加 <code>https://raw.githubusercontent.com/Wcof/PlugBox/main/index.json</code></li>
+          <li>搜索 <code>plugbox</code>，点安装</li>
           <li>重启 DSH 窗口（Host 端代码在启动时加载）</li>
         </ol>
         <h3>方式二：命令行</h3>
-        <pre><code>dsh plugin --profile web add github:Wcof/DeepSeekBox</code></pre>
+        <pre><code>dsh plugin --profile web add github:Wcof/PlugBox</code></pre>
         <p>桌面端把 <code>--profile web</code> 换成实际的 profile 名（通常是 <code>desktop</code>）。</p>
       </section>
 
       <section>
         <h2>插件索引源</h2>
-        <p>索引遵循 DSH 的 <code>format: 1</code>，任何 DSH 实例都可以订阅：</p>
+        <p>精选索引遵循 DSH 的 <code>format: 1</code>，任何 DSH 实例都可以订阅：</p>
         <table>
           <thead>
             <tr><th>地址</th><th>说明</th></tr>
           </thead>
           <tbody>
             <tr>
-              <td><code>https://raw.githubusercontent.com/Wcof/DeepSeekBox/main/index.json</code></td>
-              <td>始终最新，推荐</td>
+              <td><code>https://raw.githubusercontent.com/Wcof/PlugBox/main/index.json</code></td>
+              <td>GitHub Raw，始终最新，推荐</td>
             </tr>
             <tr>
-              <td><code>https://cdn.jsdelivr.net/gh/Wcof/DeepSeekBox@main/index.json</code></td>
-              <td>CDN 镜像，缓存约 12 小时</td>
+              <td><code>https://cdn.jsdelivr.net/gh/Wcof/PlugBox@main/index.json</code></td>
+              <td>jsDelivr 镜像，CDN 缓存约 12 小时</td>
             </tr>
             <tr>
-              <td><code>https://cdn.jsdelivr.net/gh/Wcof/DeepSeekBox@&lt;commit-sha&gt;/index.json</code></td>
-              <td>按提交固定，内容不变</td>
+              <td><code>index.json</code>（仓库根目录）</td>
+              <td>随仓库一起签出，构建时生成</td>
             </tr>
           </tbody>
         </table>
-        <p>索引里每个版本都登记了 <code>source: { type: "git", url, commit }</code> 与 <code>engines.dsh</code>；后者原样取自该提交的 <code>package.json</code>。</p>
+        <p>另有从第三方站点 <a href="https://dsh-plugin.org">dsh-plugin.org</a> 同步的社区目录 <code>community.json</code>，条目标记词为 <code>community</code>。索引里每个版本都登记了 <code>source: { type: "git", url, commit }</code> 与兼容范围；后者原样取自该提交的 <code>package.json</code>。jsDelivr 长时间不更新时用 <code>curl https://purge.jsdelivr.net/gh/Wcof/PlugBox@main/index.json</code> 刷新。</p>
+      </section>
+
+      <section>
+        <h2>支持矩阵</h2>
+        <table>
+          <thead>
+            <tr><th>宿主</th><th>适配器 id</th><th>是否实测</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>DeepSeek Harness（DSH）</td><td><code>dsh</code></td><td>已实测（0.2.1-rc.5）</td></tr>
+            <tr><td>zcode 的 DeepSeek Harness</td><td><code>zcode-dsh</code></td><td>未实测</td></tr>
+          </tbody>
+        </table>
+        <p>表中没有出现的宿主即尚未对接；未实测的适配器不会作为默认选择。</p>
       </section>
 
       <section>
@@ -230,8 +257,8 @@
             <tr><th>标签</th><th>含义</th></tr>
           </thead>
           <tbody>
-            <tr><td>DSH 官方</td><td>DSH 官方维护或收录，索引里带 <code>official</code> 标记</td></tr>
-            <tr><td>DeepSeekBox 收录</td><td>收录在本项目的索引里，属于本项目的整理，不代表官方背书</td></tr>
+            <tr><td>宿主官方</td><td>当前宿主官方维护或收录，展示名由适配器提供（DSH 下为「DSH 官方」）</td></tr>
+            <tr><td>PlugBox 收录</td><td>收录在本项目的索引里，属于本项目的整理，不代表任何宿主官方背书</td></tr>
             <tr><td>第三方</td><td>来自其他订阅的索引源</td></tr>
           </tbody>
         </table>
@@ -241,20 +268,24 @@
         <h2>常见问题</h2>
         <div class="faq">
           <details>
-            <summary>DeepSeek Harness 插件在哪里安装？</summary>
-            <p>在「发现 → Index sources」添加索引地址后搜索安装，或在终端执行 <code>dsh plugin --profile web add &lt;包名或 git 地址&gt;</code>。装完需要重启窗口。</p>
+            <summary>PlugBox 支持哪些宿主？</summary>
+            <p>第一个支持的宿主是 DeepSeek Harness（已实测 <code>0.2.1-rc.5</code>），zcode 的 DeepSeek Harness 是已知宿主但尚未实测。新增宿主 = 新增一个适配器 + 少量配置，核心层不用改。</p>
           </details>
           <details>
             <summary>插件显示「版本不符」是什么意思？</summary>
-            <p>该版本的 <code>engines.dsh</code> 不包含你当前的 DSH 版本。宿主安装后会按 semver 校验并拒绝回滚；DeepSeekBox 把这个判断提前到列表里。</p>
+            <p>该版本的兼容范围（在 DSH 上是 <code>engines.dsh</code>）不包含你当前的宿主版本。宿主安装后会按 semver 校验并拒绝回滚；PlugBox 把这个判断提前到列表里。</p>
           </details>
           <details>
             <summary>按分支安装和普通安装有什么区别？</summary>
             <p>普通安装装固定提交；分支安装装分支当前的头提交，会随上游推送变化，适合还没发版的修复。</p>
           </details>
           <details>
-            <summary>「DeepSeekBox 收录」是 DSH 官方收录吗？</summary>
-            <p>不是。它只表示收录在本项目的索引里；官方收录另有 <code>official</code> 标记。</p>
+            <summary>「PlugBox 收录」是宿主官方收录吗？</summary>
+            <p>不是。它只表示收录在本项目的索引里；宿主官方收录按各宿主自己的标记判定（DSH 是 <code>official</code>）。</p>
+          </details>
+          <details>
+            <summary>旧的 DeepSeekBox 订阅地址还能用吗？</summary>
+            <p>不能。仓库已改名为 <code>Wcof/PlugBox</code>，旧地址已失效。请删除旧订阅，改用 <code>https://raw.githubusercontent.com/Wcof/PlugBox/main/index.json</code>。</p>
           </details>
         </div>
       </section>
@@ -262,19 +293,20 @@
       <section>
         <h2>English</h2>
         <p>
-          DeepSeekBox is a plugin center for DeepSeek Harness (DSH): install, update and enable DSH plugins, aggregate multiple plugin index sources, flag versions the running DSH cannot load, and install from a git branch when upstream has not published a release. It is itself an installable DSH bundle and publishes a <code>format: 1</code> plugin index that any DSH instance can subscribe to.
+          PlugBox is a plugin adapter and management tool for engines and agent platforms that support custom plugins: install, update and enable plugins in one panel, aggregate multiple index sources, flag versions the running host cannot load, and install from a git branch when upstream has not published a release. It is split into a host-agnostic core layer and one adapter per host; DeepSeek Harness is the first supported host.
         </p>
-        <pre><code>dsh plugin --profile web add github:Wcof/DeepSeekBox</code></pre>
+        <pre><code>dsh plugin --profile web add github:Wcof/PlugBox</code></pre>
       </section>
 
       <footer>
         <div class="links">
-          <a href="https://github.com/Wcof/DeepSeekBox">GitHub 仓库</a>
-          <a href="https://github.com/Wcof/DeepSeekBox/blob/main/README.md">中文文档</a>
-          <a href="https://github.com/Wcof/DeepSeekBox/blob/main/README.en.md">English docs</a>
-          <a href="https://github.com/Wcof/DeepSeekBox/releases">Releases</a>
+          <a href="https://github.com/Wcof/PlugBox">GitHub 仓库</a>
+          <a href="https://github.com/Wcof/PlugBox/blob/main/README.md">中文文档</a>
+          <a href="https://github.com/Wcof/PlugBox/blob/main/README.en.md">English docs</a>
+          <a href="https://github.com/Wcof/PlugBox/blob/main/docs/hosts/dsh-spec.md">DSH 宿主契约</a>
+          <a href="https://github.com/Wcof/PlugBox/releases">Releases</a>
         </div>
-        <p>MIT License · 本项目与 DeepSeek 官方无隶属关系。</p>
+        <p>MIT License · 本项目与 DeepSeek 官方、zcode 均无隶属关系，也不是任何宿主的官方产品。</p>
       </footer>
     </div>
   </body>

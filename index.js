@@ -1,11 +1,16 @@
 /**
- * DeepSeekBox 插件中心 —— Host 半边。
+ * PlugBox · Host 半边（DeepSeek Harness 适配器的宿主侧实现）。
  *
  * 两个职责：
- * 1. 把随包提交的 `web/`（Vue 构建产物）挂在同源前缀路由 `/deepseekbox/` 上，
+ * 1. 把随包提交的 `web/`（Vue 构建产物）挂在同源前缀路由 `/plugbox/` 上，
  *    供 Client 半边在侧栏入口里用 iframe 打开；
- * 2. 在同一前缀下提供 `/deepseekbox/api/rpc`，把页面上的操作转成对 DSH
+ * 2. 在同一前缀下提供 `/plugbox/api/rpc`，把页面上的操作转成对该宿主
  *    `pluginManager` / `pluginMarket` 服务的真实调用。
+ *
+ * 这个文件属于适配层（src/adapters/dsh/）在宿主进程里的那一半：这里的路由前缀、
+ * 服务名都是宿主专属知识，核心层不认识它们。换宿主就要照着这份再写一份。
+ * 前缀与 src/adapters/dsh 里的 routePrefix 必须保持一致，
+ * npm run check:adapters 会盯着这个一致性。
  *
  * 为什么不用 `dsh.bundle` 自带的前端能力：插件中心是既有 Vue 单页应用，
  * 以静态产物 + iframe 的方式复用，避免把 UI 重写成 Client 模块。
@@ -19,7 +24,7 @@ import { fileURLToPath } from 'node:url'
 const ROOT = path.dirname(fileURLToPath(import.meta.url))
 const WEB_ROOT = path.join(ROOT, 'web')
 const ENTRY = path.join(WEB_ROOT, 'index.html')
-const ROUTE = '/deepseekbox'
+const ROUTE = '/plugbox'
 const ROUTE_PREFIX = `${ROUTE}/`
 const API_ROUTE = `${ROUTE}/api/rpc`
 const MAX_BODY_BYTES = 512 * 1024
@@ -191,7 +196,7 @@ async function branchesByApi(repo) {
   const response = await fetch(`https://api.github.com/repos/${repo}/branches?per_page=100`, {
     headers: {
       accept: 'application/vnd.github+json',
-      'user-agent': 'DeepSeekBox-PluginCenter',
+      'user-agent': 'PlugBox-PluginCenter',
       'x-github-api-version': '2022-11-28',
     },
     signal: AbortSignal.timeout(15_000),
@@ -456,7 +461,7 @@ async function handler(request, response, ctx) {
       response,
       503,
       '插件中心前端未构建：本包内缺少 web/index.html。\n' +
-        '请在本仓库运行 npm run build（web/ 随包提交），然后重启 DeepSeek Harness。\n',
+        '请在本仓库运行 npm run build（web/ 随包提交），然后重启宿主窗口。\n',
     )
     return
   }
@@ -478,11 +483,11 @@ export function apply(ctx) {
             handler(request, response, ctx).catch((error) => {
               if (!response.headersSent) sendText(response, 500, 'Internal Server Error')
               else response.destroy()
-              console.error('[deepseekbox] 路由处理失败：', error)
+              console.error('[plugbox] 路由处理失败：', error)
             })
           },
         }),
-      'deepseekbox:web-route',
+      'plugbox:web-route',
     )
   })
 }

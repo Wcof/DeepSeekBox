@@ -10,13 +10,20 @@
  * 3. owner/repo 就是本机这个仓库自己。
  *
  * 第 3 条是安全边界：第三方索引随便起个 index.json 就能置顶的话，
- * 等于把列表第一屏的展示位交给了订阅源。同理 Wcof/DeepSeekBox-attacker 必须判否。
+ * 等于把列表第一屏的展示位交给了订阅源。同理 Wcof/PlugBox-attacker 必须判否。
  *
  * 本文件只导出纯函数，不 import 任何运行时依赖，好让 scripts/check-pinned-index.mjs 直接断言。
  */
 
-/** 本仓库的 owner/repo，用于判定「是不是自己家的索引」 */
-const SELF_REPO = { owner: 'wcof', repo: 'deepseekbox' }
+import { BRAND } from '../core/protocol/brand'
+
+/** 本仓库的 owner/repo，用于判定「是不是自己家的索引」；与 BRAND.repository 对齐 */
+const SELF_REPO = parseRepo(BRAND.repository)
+
+function parseRepo(repo: string): { owner: string; repo: string } {
+  const [owner, name] = repo.split('/')
+  return { owner: owner.toLowerCase(), repo: name.toLowerCase() }
+}
 
 /** 只有本仓库的这个文件才叫精选索引；同仓库的 community.json 不算 */
 const FEATURED_BASENAME = 'index.json'

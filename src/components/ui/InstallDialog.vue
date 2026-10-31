@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { pluginCenter } from '../../stores/pluginCenter'
+import { HOST } from '../../types/plugin'
 
 const { state, closeInstallDialog, installSpec } = pluginCenter
 
@@ -38,7 +39,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
     <div class="dialog" role="dialog" aria-modal="true" aria-label="安装插件">
       <h2 class="dialog__title">安装插件</h2>
       <p class="dialog__message">
-        填入包名、git 地址或本机目录，DSH 会用 pnpm 装进当前 profile；装完需要重启窗口才会加载新的 Host 代码。
+        填入包名、git 地址或本机目录，{{ HOST.displayName }} 会把依赖装进当前 profile；装完需要重启窗口才会加载新的 Host 代码。
       </p>
 
       <input
@@ -46,7 +47,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
         class="dialog__input"
         type="text"
         spellcheck="false"
-        placeholder="deepseek-box / git+https://… / /Users/me/plugin"
+        placeholder="plugbox / git+https://… / /Users/me/plugin"
         :disabled="installing()"
         @keydown.enter="submit()"
       />

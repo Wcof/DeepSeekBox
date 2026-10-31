@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { MarketEntry, RepoBranch } from '../../types/plugin'
-import { MARKET_LABEL_TAG, MARKET_LABEL_TEXT, githubRepoOf } from '../../types/plugin'
+import { MARKET_LABEL_TAG, MARKET_LABEL_TEXT, githubRepoOf, HOST } from '../../types/plugin'
+import { hostRequirementOf } from '../../core/manifest'
 import { pluginCenter } from '../../stores/pluginCenter'
 import AppIcon from '../icons/AppIcon.vue'
 import PluginTile from './PluginTile.vue'
@@ -33,17 +34,17 @@ const versionLabel = computed(
  */
 const incompatible = computed(() => preferredVersion.value?.compatible === false)
 
-/** 宿主给出的未满足要求，键为 engines.dsh 或 DSH peer 包名 */
-const requiredRange = computed(() => preferredVersion.value?.requirements?.['engines.dsh'])
+/** 宿主给出的未满足要求：字段名（如 engines.dsh）由适配器翻译成带命名空间的键 */
+const requiredRange = computed(() => hostRequirementOf(HOST, preferredVersion.value?.requirements, 'engines.dsh'))
 
 /** 文案里带上具体版本号：说的是这一版装不上，不是整个插件被拉黑 */
 const incompatibilityLead = computed(
-  () => `${versionLabel.value === '未知' ? '这一版' : `v${versionLabel.value} `}与当前 DSH 版本不兼容`,
+  () => `${versionLabel.value === '未知' ? '这一版' : `v${versionLabel.value} `}与当前${HOST.displayName}版本不兼容`,
 )
 
 const incompatibilityText = computed(() =>
   requiredRange.value
-    ? `${incompatibilityLead.value}（要求 DSH ${requiredRange.value}）`
+    ? `${incompatibilityLead.value}（要求${HOST.displayName} ${requiredRange.value}）`
     : incompatibilityLead.value,
 )
 
@@ -69,7 +70,7 @@ const status = computed<{ text: string; class: string }>(() => {
     case 'installed':
       return { text: '已安装', class: 'status--running' }
     case 'provided':
-      return { text: '随 DSH 提供', class: 'status--running' }
+      return { text: `随${HOST.displayName}提供`, class: 'status--running' }
     default:
       return { text: '可安装', class: 'status--stopped' }
   }
@@ -200,7 +201,7 @@ onBeforeUnmount(() => attachDocumentListeners(false))
         <span><AppIcon name="alert-circle" :size="14" /></span>
         <span
           >{{ incompatibilityLead }}<template v-if="requiredRange"
-            >（要求 DSH <span class="mono">{{ requiredRange }}</span>）</template
+            >（要求{{ HOST.displayName }} <span class="mono">{{ requiredRange }}</span>）</template
           ></span
         >
       </div>
@@ -289,7 +290,7 @@ onBeforeUnmount(() => attachDocumentListeners(false))
                 <span v-if="branch.version" class="mono">v{{ branch.version }}</span>
                 <span v-else class="branch-pop__muted">没有 package.json</span>
                 <span v-if="branch.enginesDsh" class="branch-pop__chip">
-                  要求 DSH <span class="mono">{{ branch.enginesDsh }}</span>
+                  要求{{ HOST.displayName }} <span class="mono">{{ branch.enginesDsh }}</span>
                 </span>
                 <span v-if="!branch.bundle" class="branch-pop__chip branch-pop__chip--warn">
                   未声明组合包
@@ -304,7 +305,11 @@ onBeforeUnmount(() => attachDocumentListeners(false))
               type="button"
               class="btn btn--primary btn--sm"
               :disabled="!branch.bundle || busyOf(branch)"
-              :title="branch.bundle ? undefined : '这个分支没有声明 dsh.bundle，装进去不能按插件管理'"
+              :title="
+                branch.bundle
+                  ? undefined
+                  : `这个分支没声明组合包，装进${HOST.displayName}里不能按插件管理`
+              "
               @click="installFromBranch(branch)"
             >
               <span v-if="busyOf(branch)" class="spinner" />

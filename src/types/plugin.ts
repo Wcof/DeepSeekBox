@@ -1,3 +1,6 @@
+import { activeAdapter } from '../adapters/registry'
+import { compareVersions as compare } from '../core/protocol/version'
+
 /** 插件管理 Tab 的来源筛选 */
 export type LocalFilter = 'all' | 'official' | 'third-party' | 'local'
 /** 插件市场 Tab 的筛选 */
@@ -16,11 +19,19 @@ export type BundleOrigin = 'official' | 'third-party' | 'local'
 
 const LOCAL_SOURCE_PATTERN = /^(?:link|file|workspace|directory):|^(\.{1,2}\/|\/|~\/|[a-z]:[\\/])/i
 
-/** DSH 自家的包都挂在这个 npm scope 下，但宿主的 official 标记只表示「随安装附带」 */
-const DSH_SCOPE = '@deepseek-ai/'
+/** 当前宿主：宿主叫什么、它的包挂在哪个 scope 下，答案都从这里出 */
+export const HOST = activeAdapter()
 
+/** 当前宿主的名字：界面上凡是「某个引擎」的地方都用它，不要再写死宿主名 */
+export const HOST_NAME = HOST.displayName
+
+/** 版本比较实现迁到 core 了，这里保留同名导出，免得调用方都跟着改 */
+export const compareVersions = compare
+
+/** 宿主自带的包挂在这个 npm scope 下；宿主的 official 标记只表示「随安装附带」 */
 export function bundleOrigin(bundle: { name: string; official: boolean; source?: string }): BundleOrigin {
-  if (bundle.official || bundle.name.startsWith(DSH_SCOPE)) return 'official'
+  const scopes = HOST.vendorPackageScopes
+  if (bundle.official || scopes.some((scope) => bundle.name.startsWith(scope))) return 'official'
   return LOCAL_SOURCE_PATTERN.test((bundle.source ?? '').trim()) ? 'local' : 'third-party'
 }
 
@@ -37,15 +48,15 @@ export const BUNDLE_ORIGIN_TAG: Record<BundleOrigin, string> = {
 }
 
 /**
- * 收录来源：只有 DSH 官方给出的 official 标记才算「官方」，
- * 本 Box 自己的索引只是收录（catalog），其余索引源一律算第三方。
+ * 收录来源：宿主的官方标记优先，其次看是不是本 Box 的索引收录，其余一律第三方。
+ * 文案取自当前适配器，所以换宿主时这三句话自动跟着变。
  */
 export type MarketLabel = 'official' | 'catalog' | 'third-party'
 
 export const MARKET_LABEL_TEXT: Record<MarketLabel, string> = {
-  official: 'DSH 官方',
-  catalog: 'DeepSeekBox 收录',
-  'third-party': '第三方',
+  official: HOST.labels.vendor,
+  catalog: HOST.labels.curated,
+  'third-party': HOST.labels.thirdParty,
 }
 
 export const MARKET_LABEL_TAG: Record<MarketLabel, string> = {
@@ -97,7 +108,7 @@ export interface BundleError {
   diagnostic?: string
 }
 
-/** 已安装（或被随附）的组合包，数据来自 DSH 的 pluginManager.listBundles */
+/** 已安装（或被随附）的组合包，数据取自宿主的插件管理服务 */
 export interface InstalledBundle {
   /** 包名，唯一标识 */
   name: string
@@ -130,7 +141,7 @@ export interface MarketVersion {
   requirements?: Record<string, string>
 }
 
-/** 索引源里的一个插件，数据来自 DSH 的 pluginMarket.search */
+/** 索引源里的一个插件，数据取自宿主的插件市场服务 */
 export interface MarketEntry {
   name: string
   title: string
@@ -192,17 +203,6 @@ export interface Toast {
   id: number
   type: ToastType
   text: string
-}
-
-export function compareVersions(a: string, b: string): number {
-  const pa = a.split('.').map((n) => Number.parseInt(n, 10) || 0)
-  const pb = b.split('.').map((n) => Number.parseInt(n, 10) || 0)
-  const len = Math.max(pa.length, pb.length)
-  for (let i = 0; i < len; i++) {
-    const d = (pa[i] ?? 0) - (pb[i] ?? 0)
-    if (d !== 0) return d > 0 ? 1 : -1
-  }
-  return 0
 }
 
 /** 作者展示：full 显示 “id（中文名）”，否则优先中文名 */
