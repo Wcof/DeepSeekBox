@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Plugin Center",
-    "description": "Browse, download and manage DeepSeek Harness plugins: update checks, per-plugin settings, and a published plugin index source."
+    "description": "Plugin center for DeepSeek Harness: browse, install, update and manage DSH plugins, aggregate plugin index sources and install from a git branch. Also publishes a subscribable DSH plugin index."
   }
 }

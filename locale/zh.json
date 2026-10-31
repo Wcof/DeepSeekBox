@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "插件中心",
-    "description": "在 DeepSeek Harness 中浏览、下载与管理插件：检查更新、独立配置，并作为插件索引源发布。"
+    "description": "DeepSeek Harness 插件中心：浏览、安装、更新与管理 DSH 插件，聚合多个插件索引源，支持按分支安装；本包同时发布可订阅的 DSH 插件索引。"
   }
 }
